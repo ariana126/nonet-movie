@@ -69,10 +69,8 @@ class BerlinSourceImpl(BerlinSource):
         parser.feed(html)
         return parser.get_table()
 
-    def __extract_quality_from_file_name(self, file_name: str) -> str:
-        pass
-
-    def __normalize_file_name(self, file_name: str) -> str:
+    @staticmethod
+    def __normalize_file_name(file_name: str) -> str:
         file_name = '.'.join(file_name.split('.')[:-1])
         file_name = file_name.replace('.', ' ')
         file_name = file_name.replace('_', ' ')
