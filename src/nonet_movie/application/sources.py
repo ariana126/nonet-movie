@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from ddd.domain import ValueObject
 
-from src.nonet_movie.domain.movie import Link
+from ..domain.movie import Link
 
 
 class BerlinMovieData(ValueObject):
@@ -17,6 +17,7 @@ class BerlinMovieData(ValueObject):
     @property
     def download_links(self) -> list[Link]:
         return self.__download_links
+
 
 class BerlinSource(ABC):
     @abstractmethod

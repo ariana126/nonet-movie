@@ -5,11 +5,12 @@ from ddd.domain import Entity
 from ddd.domain.value import Identity
 
 class Link(ValueObject):
-    def __init__(self, url: str, quality: str):
+    def __init__(self, url: str, quality: str, size: str):
         # TODO: Use pydantic package for url validation.
         self.__validate_url(url)
         self.__url = url
         self.__quality = quality
+        self.__size = size
 
     @staticmethod
     def __validate_url(url: str) -> None:
@@ -17,6 +18,9 @@ class Link(ValueObject):
             urlparse(url)
         except Exception:
             raise ValueError('Invalid URL')
+
+    def __repr__(self):
+        return f'Link(url={self.__url}, quality={self.__quality}, size={self.__size})'
 
 
 class Movie(Entity):
@@ -27,3 +31,6 @@ class Movie(Entity):
             raise ValueError('There is no movie existed in the given year')
         self.__year = year
         self.__links = links
+
+    def __repr__(self):
+        return f'Movie(title={self.__title}, year={self.__year}, links={self.__links})'
