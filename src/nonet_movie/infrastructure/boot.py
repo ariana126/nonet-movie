@@ -16,8 +16,8 @@ PARAMETERS: dict[str, str] = {
     },
     'JSON_DB_PATH': 'storage/database.json',
     'ALMAS_MOVIE_FILE_SERVERS_BASE_URLS': [
-        'https://nairobi.saymyname.website/Movies',
         'https://berlin.saymyname.website/Movies',
+        'https://nairobi.saymyname.website/Movies',
     ]
 }
 

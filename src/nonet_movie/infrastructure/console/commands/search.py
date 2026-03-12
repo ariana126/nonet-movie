@@ -28,7 +28,7 @@ class SearchCommandHandler(CommandHandler):
 
         table.add_column("version", justify="left", style="cyan")
         table.add_column("size", style="magenta")
-        table.add_column("url", justify="left", style="green")
+        table.add_column("url", overflow="fold", style="green")
 
         for link in movie.links:
             table.add_row(link.version, link.size.as_string, link.url)

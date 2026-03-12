@@ -1,6 +1,8 @@
+import threading
 import urllib.request
 from html.parser import HTMLParser
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from queue import Queue, Empty
+from threading import Thread, Lock
 
 from src.nonet_movie.application.movie_source import MovieSource, MissedMovie
 from src.nonet_movie.domain.movie import Movie, Link, FileSize
@@ -63,8 +65,10 @@ class AlmasMovieFileServerTable:
         self.rows = rows
 
     @property
-    def column_name(self) -> list[str]:
-        return [row.name for row in self.rows[1:]]
+    def column_name_sorted(self) -> list[str]:
+        names = [row.name for row in self.rows[1:]]
+        names.sort(reverse=True)
+        return names
 
     @property
     def has_file(self) -> bool:
@@ -177,17 +181,40 @@ class AlmasMovieSource(MovieSource):
         return movies, missed_movies
 
     def __get_pages_of_depth(self, file_server: AlmasMovieFileServer, depth: int, current_path: str = '') -> list[AlmasMovieFileServerPage]:
-        table: AlmasMovieFileServerTable = file_server.get_table_of_page(f"{current_path}")
-        if 0 == depth:
-            return [AlmasMovieFileServerPage(current_path, table)]
-
-        futures = []
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            for name in table.column_name:
-                futures.append(executor.submit(self.__get_pages_of_depth, file_server, depth - 1, f"{current_path}/{name}"))
-
         pages: list[AlmasMovieFileServerPage] = []
-        for future in as_completed(futures):
-            pages.extend(future.result())
+
+        lock = Lock()
+        queue = Queue()
+        def worker() -> None:
+            while True:
+                try:
+                    max_depth, path = queue.get(timeout=0.5)
+                except Empty:
+                    return
+                try:
+                    table: AlmasMovieFileServerTable = file_server.get_table_of_page(path)
+                    if 0 == max_depth:
+                        with lock:
+                            pages.append(AlmasMovieFileServerPage(path, table))
+                    else:
+                        for name in table.column_name_sorted:
+                            queue.put((max_depth - 1, f"{path}/{name}"))
+                except Exception as e:
+                    print(f'{threading.current_thread().name} encounters an error: {e}.')
+                    continue
+                finally:
+                    queue.task_done()
+
+        queue.put((depth, current_path))
+
+        threads: list[Thread] = []
+        for i in range(10):
+            thread = Thread(target=worker, name=f'Thread-{i}')
+            thread.start()
+            threads.append(thread)
+
+        queue.join()
+        for thread in threads:
+            thread.join()
 
         return pages
