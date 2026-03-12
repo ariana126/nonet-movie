@@ -1,3 +1,6 @@
+from rich.console import Console
+from rich.table import Table
+
 from ....application.search import SearchMovieUseCase
 from ....domain.movie import Movie
 from ....infrastructure.console.command import CommandHandler
@@ -20,7 +23,14 @@ class SearchCommandHandler(CommandHandler):
 
     @staticmethod
     def __present_movie(movie: Movie) -> None:
-        print(f"{movie.title} ({movie.year})")
+        console = Console()
+        table = Table(title=f"{movie.title} ({movie.year})")
+
+        table.add_column("quality", justify="left", style="cyan")
+        table.add_column("size", style="magenta")
+        table.add_column("url", justify="left", style="green")
+
         for link in movie.links:
-            print(f"{link.quality} - {link.size} ({link.url})")
-        print()
+            table.add_row(link.quality, link.size, link.url)
+
+        console.print(table)
