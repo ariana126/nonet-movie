@@ -25,3 +25,13 @@ class MovieRepository(ABC):
     @abstractmethod
     def open_transaction(self) -> None:
         pass
+
+    def close_transaction(self) -> None:
+        pass
+
+    def __enter__(self):
+        self.open_transaction()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close_transaction()

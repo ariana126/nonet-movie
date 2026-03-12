@@ -1,24 +1,10 @@
 from abc import ABC, abstractmethod
 
-from ddd.domain import ValueObject
+from ..domain.movie import Movie
 
-from ..domain.movie import Link
 
 class MovieHasNoData(RuntimeError):
     pass
-
-class BerlinMovieData(ValueObject):
-    def __init__(self, title: str, download_links: list[Link]):
-        self.__title = title
-        self.__download_links = download_links
-
-    @property
-    def title(self) -> str:
-        return self.__title
-
-    @property
-    def download_links(self) -> list[Link]:
-        return self.__download_links
 
 
 class BerlinSource(ABC):
@@ -31,5 +17,5 @@ class BerlinSource(ABC):
         pass
 
     @abstractmethod
-    def get_movie_data(self, year: int, id_: str) -> BerlinMovieData:
+    def get_movie(self, year: int, id_: str) -> Movie:
         pass

@@ -1,8 +1,8 @@
 import urllib.request
 from html.parser import HTMLParser
 
-from ..application.sources import BerlinSource, BerlinMovieData, MovieHasNoData
-from ..domain.movie import Link, FileSize
+from ..application.sources import BerlinSource, MovieHasNoData
+from ..domain.movie import Link, FileSize, Movie
 
 
 class _TableParser(HTMLParser):
@@ -47,7 +47,7 @@ class BerlinSourceImpl(BerlinSource):
         table: list[list[str]] = self.__get_table_of_page(f'{year}/')
         return [row[0] for row in table]
 
-    def get_movie_data(self, year: int, id_: str) -> BerlinMovieData:
+    def get_movie(self, year: int, id_: str) -> Movie:
         table: list[list[str]] = [row for row in self.__get_table_of_page(f'{year}/{id_}/') if not '-' == row[2]]
         if 0 == len(table):
             raise MovieHasNoData(f'{year}/{id_}')
@@ -61,7 +61,7 @@ class BerlinSourceImpl(BerlinSource):
             )
             for row in table
         ]
-        return BerlinMovieData(title, links)
+        return Movie(title, year, links)
 
     def __get_table_of_page(self, page_path: str) -> list[list[str]]:
         url = f"{self.__base_url}/{page_path}"

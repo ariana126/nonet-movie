@@ -1,4 +1,6 @@
-import time
+from datetime import datetime
+from rich.console import Console
+from rich.table import Table
 
 from src.nonet_movie.application.discovery import DiscoverNewMoviesUseCase, DiscoveryReport
 from src.nonet_movie.infrastructure.console.command import CommandHandler
@@ -13,19 +15,22 @@ class DiscoverCommandHandler(CommandHandler):
         return tuple()
 
     def handle(self, args: list[str]) -> None:
-        print(f"Start at {time.strftime("%H:%M:%S")}")
-        result: DiscoveryReport = self.__use_case.execute()
-        print(f'Finish at {time.strftime("%H:%M:%S")}')
+        started_at: datetime = datetime.now()
+        report: DiscoveryReport = self.__use_case.execute()
+        finished_at: datetime = datetime.now()
 
-        print('Summary:')
-        print(f"Total discovered: {result.total_movies_count}")
-        print(f"Total failed: {result.number_of_failed_movies}")
-        print(f"Number of years: {result.number_of_years}")
-        print('Each year number of Movies')
-        for year, movie_count in result.movies_count_in_years.items():
-            print(f"Year {year}: {movie_count}")
-        print('Failed movies:')
-        for error in result.failed_movies:
-            print(f"{error['year']}/{error['id']}")
-            print(error['exception'])
-            print()
+        console = Console()
+
+        table = Table(title='Discovery Completed')
+        table.add_column("started at")
+        table.add_column("finished at")
+        table.add_column("elapsed")
+        table.add_row(started_at.strftime('%Y-%m-%d %H:%M:%S'), finished_at.strftime('%Y-%m-%d %H:%M:%S'), str(finished_at - started_at))
+        console.print(table, justify="center")
+
+        table = Table(title='Summary')
+        table.add_column("Total discovered")
+        table.add_column("Successfully updated")
+        table.add_column("Missed")
+        table.add_row(str(report.total_movies_count), str(report.number_of_saved_movies), str(report.number_of_missed_movies))
+        console.print(table, justify="center")

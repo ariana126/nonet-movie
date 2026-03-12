@@ -19,12 +19,12 @@ class JsonDBMovieRepository(MovieRepository):
         os.makedirs(os.path.dirname(self.__db_path), exist_ok=True)
         with open(self.__db_path, "w", encoding="utf-8") as file:
             json.dump(self.__load(), file, indent=2, ensure_ascii=False)
-        self.__loaded_records = {}
-        self.__records_are_loaded = False
-        self.__is_transaction_open = False
 
     def open_transaction(self) -> None:
         self.__is_transaction_open = True
+
+    def close_transaction(self) -> None:
+        self.__is_transaction_open = False
 
     def search_in_title(self, title: str) -> list[Movie]:
         records = self.__load()
