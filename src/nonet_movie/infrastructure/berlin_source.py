@@ -56,7 +56,7 @@ class BerlinSourceImpl(BerlinSource):
         links: list[Link] = [
             Link(
                 f'{self.__base_url}/{year}/{id_}/{row[0]}',
-                self.__extract_link_quality(row[0], year),
+                self.__extract_link_version(row[0], year),
                 FileSize.from_string(row[2])
             )
             for row in table
@@ -77,7 +77,7 @@ class BerlinSourceImpl(BerlinSource):
             return self.__normalize_file_name(table[0][0])
         return self.__normalize_file_name(file_name).split(str(year))[0].strip()
 
-    def __extract_link_quality(self, file_name: str, year: int) -> str:
+    def __extract_link_version(self, file_name: str, year: int) -> str:
         if not self.__is_file_name_valid(file_name, year):
             return self.__normalize_file_name(file_name)
         return self.__normalize_file_name(file_name).split(str(year))[1].strip()

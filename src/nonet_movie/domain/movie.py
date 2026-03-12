@@ -47,11 +47,11 @@ class FileSize(ValueObject):
         return FileSize(quantity, unit)
 
 class Link(ValueObject):
-    def __init__(self, url: str, quality: str, size: FileSize):
+    def __init__(self, url: str, version: str, size: FileSize):
         # TODO: Use pydantic package for url validation.
         self.__validate_url(url)
         self.__url = url
-        self.__quality = quality
+        self.__version = version
         self.__size = size
 
     @staticmethod
@@ -62,15 +62,15 @@ class Link(ValueObject):
             raise ValueError('Invalid URL')
 
     def __repr__(self):
-        return f'Link(url={self.__url}, quality={self.__quality}, size={self.__size})'
+        return f'Link(url={self.__url}, version={self.__version}, size={self.__size})'
 
     @property
     def url(self) -> str:
         return self.__url
 
     @property
-    def quality(self) -> str:
-        return self.__quality
+    def version(self) -> str:
+        return self.__version
 
     @property
     def size(self) -> FileSize:

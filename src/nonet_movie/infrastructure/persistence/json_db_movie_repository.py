@@ -70,7 +70,7 @@ class JsonDBMovieRepository(MovieRepository):
             "links": [
                 {
                     "url": link.url,
-                    "quality": link.quality,
+                    "version": link.version,
                     "size": link.size.as_string,
                 }
                 for link in movie.links
@@ -82,7 +82,7 @@ class JsonDBMovieRepository(MovieRepository):
         links = [
             Link(
                 url=link_data["url"],
-                quality=link_data["quality"],
+                version=link_data["version"],
                 size=FileSize.from_string(link_data["size"]),
             )
             for link_data in record["links"]

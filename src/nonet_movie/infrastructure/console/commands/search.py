@@ -31,6 +31,6 @@ class SearchCommandHandler(CommandHandler):
         table.add_column("url", justify="left", style="green")
 
         for link in movie.links:
-            table.add_row(link.quality, link.size.as_string, link.url)
+            table.add_row(link.version, link.size.as_string, link.url)
 
         console.print(table)

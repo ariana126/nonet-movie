@@ -14,7 +14,7 @@ PARAMETERS: dict[str, str] = {
         'discover': DiscoverCommandHandler,
     },
     'JSON_DB_PATH': 'storage/database.json',
-    'BERLIN_SOURCE_BASE_URL': 'https://berlin.saymyname.website/Movies',
+    'BERLIN_SOURCE_BASE_URL': 'https://nairobi.saymyname.website/Movies',
 }
 
 
