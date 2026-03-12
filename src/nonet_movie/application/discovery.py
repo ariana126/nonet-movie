@@ -1,17 +1,8 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from underpy import ServiceClass
 
-from .sources import BerlinSource, MovieHasNoData
+from .movie_source import MovieSourcesFactory, MovieSource, MissedMovie
 from ..domain.movie import Movie
 from ..domain.service.MovieRepositoy import MovieRepository
-
-
-class MissedMovie:
-    def __init__(self, year: int, id_: str, error: Exception):
-        self.year = year
-        self.id_ = id_
-        self.error = error
 
 
 class DiscoveryReport:
@@ -31,53 +22,29 @@ class DiscoveryReport:
     def number_of_missed_movies(self) -> int:
         return len(self.missed_movies)
 
+    @property
+    def has_missed_movies(self) -> bool:
+        return 0 < len(self.missed_movies)
+
 
 class DiscoverNewMoviesUseCase(ServiceClass):
-    def __init__(self, berlin_source: BerlinSource, movie_repository: MovieRepository):
-        self.__berlin_source = berlin_source
+    def __init__(self, movie_repository: MovieRepository, movie_sources_factory: MovieSourcesFactory):
         self.__movie_repository = movie_repository
+        self.__movie_sources_factory = movie_sources_factory
 
     def execute(self) -> DiscoveryReport:
-        years: list[int] = self.__berlin_source.get_years()
-        ids: dict[int, list[str]] = dict(sorted(self.__find_movie_ids(years).items(), key=lambda item: item[0], reverse=True))
-
-        movies_data: list[Movie]
-        missed_movies: list[MissedMovie]
-        movies_data, missed_movies = self.__get_movies_data(ids)
-
-        self.__save_movies(movies_data)
-        return DiscoveryReport(movies_data, missed_movies)
-
-    def __find_movie_ids(self, years: list[int]) -> dict[int, list[str]]:
-        futures = {}
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            for year in years:
-                futures[year] = executor.submit(self.__berlin_source.get_ids_of_year, year)
-
-        years_to_ids: dict[int, list[str]] = {}
-        for year, future in futures.items():
-            years_to_ids[year] = future.result()
-        return years_to_ids
-
-    def __get_movies_data(self, year_to_ids: dict[int, list[str]]) -> tuple[list[Movie], list[MissedMovie]]:
-        futures = {}
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            for year, ids in year_to_ids.items():
-                for id_ in ids:
-                    futures[executor.submit(self.__berlin_source.get_movie, year, id_)] = (year, id_)
-
         movies: list[Movie] = []
-        failed_movies: list[MissedMovie] = []
-        for future in as_completed(futures):
-            year, id_ = futures[future]
-            try:
-                movies.append(future.result())
-            except MovieHasNoData:
-                pass
-            except Exception as e:
-                failed_movies.append(MissedMovie(year, id_, e))
+        missed_movies: list[MissedMovie] = []
 
-        return movies, failed_movies
+        movie_sources: list[MovieSource] = self.__movie_sources_factory.get_sources()
+        for source in movie_sources:
+            source_movies, source_missed_movies = source.find_movies()
+            movies.extend(source_movies)
+            missed_movies.extend(source_missed_movies)
+
+        self.__save_movies(movies)
+
+        return DiscoveryReport(movies, missed_movies)
 
     def __save_movies(self, movies: list[Movie]) -> None:
         chunk_size: int = 500
