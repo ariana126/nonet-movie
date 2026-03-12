@@ -3,7 +3,7 @@ import os
 
 from ddd.domain.value import Identity
 
-from ...domain.movie import Movie
+from ...domain.movie import Movie, FileSize
 from ...domain.movie import Link
 from ...domain.service.MovieRepositoy import MovieRepository
 
@@ -71,7 +71,7 @@ class JsonDBMovieRepository(MovieRepository):
                 {
                     "url": link.url,
                     "quality": link.quality,
-                    "size": link.size,
+                    "size": link.size.as_string,
                 }
                 for link in movie.links
             ],
@@ -83,7 +83,7 @@ class JsonDBMovieRepository(MovieRepository):
             Link(
                 url=link_data["url"],
                 quality=link_data["quality"],
-                size=link_data["size"],
+                size=FileSize.from_string(link_data["size"]),
             )
             for link_data in record["links"]
         ]

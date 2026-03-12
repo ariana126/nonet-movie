@@ -9,4 +9,9 @@ class SearchMovieUseCase(ServiceClass):
         self.__movie_repository = movie_repository
 
     def execute(self, title: str) -> list[Movie]:
-        return self.__movie_repository.search_in_title(title)
+        movies: list[Movie] = self.__movie_repository.search_in_title(title)
+        movies.sort(key=lambda movie: movie.year, reverse=True)
+        for movie in movies:
+            movie.links.sort(key=lambda link: link.size.bytes, reverse=True)
+
+        return movies

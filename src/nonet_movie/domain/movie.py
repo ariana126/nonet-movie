@@ -4,8 +4,50 @@ from ddd.domain import ValueObject
 from ddd.domain import Entity
 from ddd.domain.value import Identity
 
+class FileSizeUnit(ValueObject):
+    __MEGABYTE = 'M'
+    __GIGABYTE = 'G'
+
+    def __init__(self, unit: str) -> None:
+        self.__unit = unit
+
+    @property
+    def as_string(self) -> str:
+        return self.__unit
+
+    @property
+    def byte_value(self) -> int:
+        if self.__MEGABYTE == self.__unit:
+            return 1000
+        if self.__GIGABYTE == self.__unit:
+            return 1000000
+        return 0
+
+    @staticmethod
+    def from_string(value: str) -> 'FileSizeUnit':
+        return FileSizeUnit(value)
+
+class FileSize(ValueObject):
+    def __init__(self, quantity: float, unit: FileSizeUnit):
+        self.__quantity = quantity
+        self.__unit = unit
+
+    @property
+    def as_string(self) -> str:
+        return f"{self.__quantity}{self.__unit.as_string}"
+
+    @property
+    def bytes(self) -> float:
+        return self.__unit.byte_value * self.__quantity
+
+    @staticmethod
+    def from_string(value: str) -> 'FileSize':
+        quantity = float(value[:-1])
+        unit = FileSizeUnit.from_string(value[-1:])
+        return FileSize(quantity, unit)
+
 class Link(ValueObject):
-    def __init__(self, url: str, quality: str, size: str):
+    def __init__(self, url: str, quality: str, size: FileSize):
         # TODO: Use pydantic package for url validation.
         self.__validate_url(url)
         self.__url = url
@@ -31,7 +73,7 @@ class Link(ValueObject):
         return self.__quality
 
     @property
-    def size(self) -> str:
+    def size(self) -> FileSize:
         return self.__size
 
 

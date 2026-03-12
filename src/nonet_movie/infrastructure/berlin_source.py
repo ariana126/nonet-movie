@@ -2,7 +2,7 @@ import urllib.request
 from html.parser import HTMLParser
 
 from ..application.sources import BerlinSource, BerlinMovieData
-from ..domain.movie import Link
+from ..domain.movie import Link, FileSize
 
 
 class _TableParser(HTMLParser):
@@ -55,7 +55,7 @@ class BerlinSourceImpl(BerlinSource):
             Link(
                 f'{self.__base_url}/{year}/{id_}/{row[0]}',
                 self.__normalize_file_name(row[0]).split(str(year))[1].strip(),
-                row[2]
+                FileSize.from_string(row[2])
             )
             for row in table
         ]
