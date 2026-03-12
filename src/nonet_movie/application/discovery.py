@@ -41,7 +41,7 @@ class DiscoverNewMoviesUseCase(ServiceClass):
         years.sort(reverse=True)
         for year in years:
             ids: list[str] = self.__berlin_source.get_ids_of_year(year)
-            years_to_movies_count[year] = len(ids)
+            years_to_movies_count[year] = 0
             for id_ in ids:
                 self.__movie_repository.open_transaction()
                 try:
@@ -49,12 +49,14 @@ class DiscoverNewMoviesUseCase(ServiceClass):
                 except MovieHasNoData:
                     continue
                 except Exception as e:
+                    years_to_movies_count[year] += 1
                     failed_movies.append({
                         'year': year,
                         'id': id_,
                         'exception': e,
                     })
                     continue
+                years_to_movies_count[year] += 1
 
                 movie = Movie(movie_data.title, year, movie_data.download_links)
                 existing_movie: Movie = self.__movie_repository.find(movie.id())
