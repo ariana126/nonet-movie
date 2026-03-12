@@ -4,6 +4,8 @@ from ddd.domain import ValueObject
 
 from ..domain.movie import Link
 
+class MovieHasNoData(RuntimeError):
+    pass
 
 class BerlinMovieData(ValueObject):
     def __init__(self, title: str, download_links: list[Link]):

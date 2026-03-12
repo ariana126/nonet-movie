@@ -103,6 +103,6 @@ class Movie(Entity):
 
     def add_link(self, link: Link) -> None:
         for existing_link in self.__links:
-            if link.equals(existing_link):
+            if link.url == existing_link.url:
                 return
         self.__links.append(link)

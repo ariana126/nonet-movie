@@ -26,7 +26,7 @@ class SearchCommandHandler(CommandHandler):
         console = Console()
         table = Table(title=f"{movie.title} ({movie.year})")
 
-        table.add_column("quality", justify="left", style="cyan")
+        table.add_column("version", justify="left", style="cyan")
         table.add_column("size", style="magenta")
         table.add_column("url", justify="left", style="green")
 

@@ -1,7 +1,7 @@
 import urllib.request
 from html.parser import HTMLParser
 
-from ..application.sources import BerlinSource, BerlinMovieData
+from ..application.sources import BerlinSource, BerlinMovieData, MovieHasNoData
 from ..domain.movie import Link, FileSize
 
 
@@ -48,13 +48,15 @@ class BerlinSourceImpl(BerlinSource):
         return [row[0] for row in table]
 
     def get_movie_data(self, year: int, id_: str) -> BerlinMovieData:
-        table: list[list[str]] = self.__get_table_of_page(f'{year}/{id_}/')
+        table: list[list[str]] = [row for row in self.__get_table_of_page(f'{year}/{id_}/') if not '-' == row[2]]
+        if 0 == len(table):
+            raise MovieHasNoData(f'{year}/{id_}')
 
-        title: str = self.__normalize_file_name(table[0][0]).split(str(year))[0].strip()
+        title: str = self.__extract_title(table, year)
         links: list[Link] = [
             Link(
                 f'{self.__base_url}/{year}/{id_}/{row[0]}',
-                self.__normalize_file_name(row[0]).split(str(year))[1].strip(),
+                self.__extract_link_quality(row[0], year),
                 FileSize.from_string(row[2])
             )
             for row in table
@@ -68,6 +70,27 @@ class BerlinSourceImpl(BerlinSource):
         parser = _TableParser()
         parser.feed(html)
         return parser.get_table()
+
+    def __extract_title(self, table: list[list[str]], year: int) -> str:
+        file_name: str|None = self.__find_valid_file_name(table, year)
+        if file_name is None:
+            return self.__normalize_file_name(table[0][0])
+        return self.__normalize_file_name(file_name).split(str(year))[0].strip()
+
+    def __extract_link_quality(self, file_name: str, year: int) -> str:
+        if not self.__is_file_name_valid(file_name, year):
+            return self.__normalize_file_name(file_name)
+        return self.__normalize_file_name(file_name).split(str(year))[1].strip()
+
+    def __find_valid_file_name(self, table: list[list[str]], year: int) -> str | None:
+        for row in table:
+            if self.__is_file_name_valid(row[0], year):
+                return row[0]
+        return None
+
+    @staticmethod
+    def __is_file_name_valid(file_name: str, year: int) -> bool:
+        return 2 == len(file_name.split(str(year)))
 
     @staticmethod
     def __normalize_file_name(file_name: str) -> str:

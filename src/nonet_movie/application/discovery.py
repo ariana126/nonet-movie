@@ -1,6 +1,6 @@
 from underpy import ServiceClass
 
-from .sources import BerlinSource, BerlinMovieData
+from .sources import BerlinSource, BerlinMovieData, MovieHasNoData
 from ..domain.movie import Movie
 from ..domain.service.MovieRepositoy import MovieRepository
 
@@ -46,11 +46,13 @@ class DiscoverNewMoviesUseCase(ServiceClass):
                 self.__movie_repository.open_transaction()
                 try:
                     movie_data: BerlinMovieData = self.__berlin_source.get_movie_data(year, id_)
-                except Exception:
+                except MovieHasNoData:
+                    continue
+                except Exception as e:
                     failed_movies.append({
                         'year': year,
                         'id': id_,
-                        'exception': str(Exception),
+                        'exception': e,
                     })
                     continue
 
@@ -65,6 +67,6 @@ class DiscoverNewMoviesUseCase(ServiceClass):
                 if chunk_size <= current_chunk:
                     self.__movie_repository.flush()
                     current_chunk = 0
-        self.__movie_repository.flush()
+            self.__movie_repository.flush()
 
         return DiscoveryReport(years_to_movies_count, failed_movies)

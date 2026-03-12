@@ -18,7 +18,7 @@ class JsonDBMovieRepository(MovieRepository):
     def flush(self) -> None:
         os.makedirs(os.path.dirname(self.__db_path), exist_ok=True)
         with open(self.__db_path, "w", encoding="utf-8") as file:
-            json.dump(self.__loaded_records, file, indent=2, ensure_ascii=False)
+            json.dump(self.__load(), file, indent=2, ensure_ascii=False)
         self.__loaded_records = {}
         self.__records_are_loaded = False
         self.__is_transaction_open = False
