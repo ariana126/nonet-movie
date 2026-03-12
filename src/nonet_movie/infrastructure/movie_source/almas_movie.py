@@ -193,7 +193,7 @@ class AlmasMovieSource(MovieSource):
                     return
                 try:
                     table: AlmasMovieFileServerTable = file_server.get_table_of_page(path)
-                    if 0 == max_depth:
+                    if 0 == max_depth or table.has_file:
                         with lock:
                             pages.append(AlmasMovieFileServerPage(path, table))
                     else:
