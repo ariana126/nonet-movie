@@ -58,3 +58,9 @@ class Movie(Entity):
     @property
     def links(self) -> list['Link']:
         return self.__links
+
+    def add_link(self, link: Link) -> None:
+        for existing_link in self.__links:
+            if link.equals(existing_link):
+                return
+        self.__links.append(link)
