@@ -16,7 +16,11 @@ class SearchCommandHandler(CommandHandler):
 
         movies: list[Movie] = self.__use_case.execute(name)
         for movie in movies:
-            print(f"{movie.title} ({movie.year})")
-            for link in movie.links:
-                print(f"{link.quality} - {link.size} ({link.url})")
-            print()
+            self.__present_movie(movie)
+
+    @staticmethod
+    def __present_movie(movie: Movie) -> None:
+        print(f"{movie.title} ({movie.year})")
+        for link in movie.links:
+            print(f"{link.quality} - {link.size} ({link.url})")
+        print()

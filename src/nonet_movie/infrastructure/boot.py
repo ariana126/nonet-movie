@@ -1,6 +1,7 @@
 from pydm import ServiceContainer, InMemoryParametersBag
 
 from .console.command import ConsoleCommandHandler
+from .console.commands.discover import DiscoverCommandHandler
 from .console.commands.search import SearchCommandHandler
 from .persistence.json_db_movie_repository import JsonDBMovieRepository
 from ..application.sources import BerlinSource
@@ -9,7 +10,8 @@ from ..domain.service.MovieRepositoy import MovieRepository
 
 PARAMETERS: dict[str, str] = {
     'CONSOLE_COMMAND_HANDLERS': {
-        'search': SearchCommandHandler
+        'search': SearchCommandHandler,
+        'discover': DiscoverCommandHandler,
     },
     'JSON_DB_PATH': 'storage/database.json',
     'BERLIN_SOURCE_BASE_URL': 'https://berlin.saymyname.website/Movies',
