@@ -23,6 +23,14 @@ class JsonDBSeriesRepository(SeriesRepository):
     def close_transaction(self) -> None:
         self.db.close_transaction()
 
+    def search_in_title(self, title: str) -> list[Series]:
+        records = self.db.load(self.__COLLECTION_NAME)
+        matches: list[Series] = []
+        for record in records.values():
+            if title.lower() in record["title"].lower():
+                matches.append(self.__deserialize(self.__fetch_relations(record)))
+        return matches
+
     def find(self, id_: Identity) -> Series|None:
         records = self.db.load(self.__COLLECTION_NAME)
         if not id_.as_string in records:

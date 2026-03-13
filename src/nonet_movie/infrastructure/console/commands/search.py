@@ -26,11 +26,11 @@ class SearchCommandHandler(CommandHandler):
         console = Console()
         table = Table(title=f"{movie.title} ({movie.year})")
 
-        table.add_column("version", justify="left", style="cyan")
+        table.add_column("version", style="cyan")
         table.add_column("size", style="magenta")
         table.add_column("url", overflow="fold", style="green")
 
         for link in movie.links:
             table.add_row(link.version, link.size.as_string, link.url)
 
-        console.print(table)
+        console.print(table, justify="center")

@@ -3,7 +3,9 @@ from pydm import ServiceContainer, InMemoryParametersBag
 from .console.command import ConsoleCommandHandler
 from .console.commands.discover import DiscoverCommandHandler
 from .console.commands.discovery_series import DiscoverSeriesCommandHandler
+from .console.commands.get_episodes import GetEpisodeCommandHandler
 from .console.commands.search import SearchCommandHandler
+from .console.commands.search_series import SearchSeriesCommandHandler
 from .movie_source.almas_movie import AlmasMovieSource
 from .movie_source.factory import MovieSourcesFactoryImpl, SeriesSourcesFactoryImpl
 from .persistence.json_db import JsonDB
@@ -18,17 +20,19 @@ PARAMETERS: dict[str, str] = {
     'CONSOLE_COMMAND_HANDLERS': {
         'search': SearchCommandHandler,
         'discover': DiscoverCommandHandler,
+        'search-series': SearchSeriesCommandHandler,
+        'get-episodes': GetEpisodeCommandHandler,
         'discover-series': DiscoverSeriesCommandHandler,
     },
     'JSON_DB_PATH': 'storage/',
     'ALMAS_MOVIE_MOVIES_FILE_SERVERS_BASE_URLS': [
-        # 'https://tokyo.saymyname.website/Movies',
-        # 'https://berlin.saymyname.website/Movies',
+        'https://tokyo.saymyname.website/Movies',
+        'https://berlin.saymyname.website/Movies',
         'https://nairobi.saymyname.website/Movies',
     ],
     'ALMAS_MOVIE_SERIES_FILE_SERVERS_BASE_URLS': [
-        # 'https://rio.ggusers.com/Series',
-        # 'https://tokyo.ggusers.com/Series',
+        'https://rio.ggusers.com/Series',
+        'https://tokyo.ggusers.com/Series',
         'https://nairobi.ggusers.com/Series',
     ],
 }

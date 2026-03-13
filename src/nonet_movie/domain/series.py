@@ -5,7 +5,13 @@ from src.nonet_movie.domain import Link
 
 class EpisodeNumber(ValueObject):
     def __init__(self, number: int) -> None:
+        if 0 > number:
+            raise ValueError(f"EpisodeNumber({number}) must be greater than 0.")
         self.__number = number
+
+    @property
+    def as_int(self) -> int:
+        return self.__number
 
     @property
     def as_string(self) -> str:
@@ -25,7 +31,13 @@ class EpisodeNumber(ValueObject):
 
 class SeasonNumber(ValueObject):
     def __init__(self, number: int) -> None:
+        if 1 > number:
+            raise ValueError(f"SeasonNumber({number}) must be greater than 0.")
         self.__number = number
+
+    @property
+    def as_int(self) -> int:
+        return self.__number
 
     @property
     def as_string(self) -> str:

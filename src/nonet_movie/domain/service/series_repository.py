@@ -14,3 +14,7 @@ class SeriesRepository(TransactionalRepository, ABC):
     @abstractmethod
     def save(self, series: Series) -> None:
         pass
+
+    @abstractmethod
+    def search_in_title(self, title: str) -> list[Series]:
+        pass

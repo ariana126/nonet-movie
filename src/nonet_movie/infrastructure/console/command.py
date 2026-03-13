@@ -11,7 +11,7 @@ from rich.console import Console
 class CommandHandler(ABC):
     @property
     @abstractmethod
-    def args(self) -> tuple[str]:
+    def args(self) -> tuple[str, ...]:
         pass
 
     @abstractmethod
