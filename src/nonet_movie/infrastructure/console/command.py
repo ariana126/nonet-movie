@@ -1,7 +1,11 @@
+import threading
+import time
 from abc import ABC, abstractmethod
+from datetime import timedelta
 from typing import Type
 
 from pydm import ServiceContainer
+from rich.console import Console
 
 
 class CommandHandler(ABC):
@@ -13,6 +17,21 @@ class CommandHandler(ABC):
     @abstractmethod
     def handle(self, args: list[str]) -> None:
         pass
+
+    @staticmethod
+    def _start_timer() -> None:
+        console = Console()
+
+        def timer():
+            start = time.perf_counter()
+            while True:
+                elapsed = time.perf_counter() - start
+                formatted_time = str(timedelta(seconds=elapsed))
+                console.print(f"[bold cyan][/bold cyan]{formatted_time}", end="\r")
+                time.sleep(0.01)
+
+        t = threading.Thread(target=timer, daemon=True)
+        t.start()
 
 
 class ConsoleCommandHandler:

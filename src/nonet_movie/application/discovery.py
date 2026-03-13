@@ -2,7 +2,7 @@ from underpy import ServiceClass
 
 from .movie_source import MovieSourcesFactory, MovieSource, MissedMovie
 from ..domain.movie import Movie
-from ..domain.service.MovieRepositoy import MovieRepository
+from ..domain.service.movie_repositoy import MovieRepository
 
 
 class DiscoveryReport:
@@ -52,10 +52,11 @@ class DiscoverNewMoviesUseCase(ServiceClass):
 
         with self.__movie_repository as repository:
             for movie in movies:
-                existing_movie: Movie = repository.find(movie.id())
+                existing_movie: Movie = repository.find(movie.id)
                 if not existing_movie is None:
-                    for link in existing_movie.links:
-                        movie.add_link(link)
+                    for link in movie.links:
+                        existing_movie.add_link(link)
+                    movie = existing_movie
                 repository.save(movie)
 
                 current_chunk += 1

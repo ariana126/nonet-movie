@@ -1,33 +1,27 @@
-import json
-import os
-
 from ddd.domain.value import Identity
 
-from ...domain.movie import Movie, FileSize
-from ...domain.movie import Link
-from ...domain.service.MovieRepositoy import MovieRepository
+from .json_db import JsonDB
+from ...domain import Movie, FileSize, Link
+from ...domain.service.movie_repositoy import MovieRepository
 
 
 class JsonDBMovieRepository(MovieRepository):
-    def __init__(self, db_path: str):
-        self.__db_path = db_path
-        self.__loaded_records = {}
-        self.__records_are_loaded = False
-        self.__is_transaction_open = False
+    __COLLECTION_NAME = 'movies'
+
+    def __init__(self, json_db: JsonDB):
+        self.db = json_db
 
     def flush(self) -> None:
-        os.makedirs(os.path.dirname(self.__db_path), exist_ok=True)
-        with open(self.__db_path, "w", encoding="utf-8") as file:
-            json.dump(self.__load(), file, indent=2, ensure_ascii=False)
+        self.db.flush()
 
     def open_transaction(self) -> None:
-        self.__is_transaction_open = True
+        self.db.open_transaction()
 
     def close_transaction(self) -> None:
-        self.__is_transaction_open = False
+        self.db.close_transaction()
 
     def search_in_title(self, title: str) -> list[Movie]:
-        records = self.__load()
+        records = self.db.load(self.__COLLECTION_NAME)
         matches: list[Movie] = []
         for record in records.values():
             if title.lower() in record["title"].lower():
@@ -35,32 +29,15 @@ class JsonDBMovieRepository(MovieRepository):
         return matches
 
     def find(self, id_: Identity) -> Movie|None:
-        records = self.__load()
-        if not id_.id() in records:
+        records = self.db.load(self.__COLLECTION_NAME)
+        if not id_.as_string in records:
             return None
-        return self.__deserialize(records[id_.id()])
+        return self.__deserialize(records[id_.as_string])
 
     def save(self, movie: Movie) -> None:
-        records = self.__load()
-        key = movie.id().id()
-        records[key] = self.__serialize(movie)
-        self.__persist(records)
-
-    def __load(self) -> dict:
-        if self.__records_are_loaded:
-            return self.__loaded_records
-        if not os.path.exists(self.__db_path) or os.path.getsize(self.__db_path) == 0:
-            return {}
-        with open(self.__db_path, "r", encoding="utf-8") as file:
-            records = json.load(file)
-            self.__loaded_records = records
-            self.__records_are_loaded = True
-            return records
-
-    def __persist(self, records: dict) -> None:
-        self.__loaded_records = records
-        if not self.__is_transaction_open:
-            self.flush()
+        records = self.db.load(self.__COLLECTION_NAME)
+        records[movie.id.as_string] = self.__serialize(movie)
+        self.db.persist(records, self.__COLLECTION_NAME)
 
     @staticmethod
     def __serialize(movie: Movie) -> dict:

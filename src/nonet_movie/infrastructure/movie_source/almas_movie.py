@@ -1,3 +1,4 @@
+import re
 import threading
 import urllib.request
 from html.parser import HTMLParser
@@ -5,11 +6,24 @@ from queue import Queue, Empty
 from threading import Thread, Lock
 
 from src.nonet_movie.application.movie_source import MovieSource, MissedMovie
-from src.nonet_movie.domain.movie import Movie, Link, FileSize
+from src.nonet_movie.application.series_source import SeriesSource, MissedSeries
+from src.nonet_movie.domain import Movie, Link, FileSize
+from src.nonet_movie.domain.series import Series, Episode, SeasonNumber, Season, EpisodeNumber
+
 
 class MoviePageHasNoData(RuntimeError):
     def __init__(self):
         super().__init__("Movie page has no data")
+
+
+class PageHasInvalidSeriesData(RuntimeError):
+    def __init__(self):
+        super().__init__("Page has invalid series data")
+
+
+class EpisodePageHasNoData(RuntimeError):
+    def __init__(self):
+        super().__init__("Episodes page has no data")
 
 
 class _TableParser(HTMLParser):
@@ -59,16 +73,21 @@ class AlmasMovieFileServerTableRow:
         file_name = file_name.replace('-', ' ')
         return file_name
 
+    @property
+    def episode_number(self) -> str:
+        matches = re.findall(r"E\d{2}", self.name)
+        if 0 == len(matches) :
+            # TODO: Use custom exception
+            raise RuntimeError('Could not parse episode number')
+        return matches[0]
 
 class AlmasMovieFileServerTable:
     def __init__(self, rows: list[AlmasMovieFileServerTableRow]):
         self.rows = rows
 
     @property
-    def column_name_sorted(self) -> list[str]:
-        names = [row.name for row in self.rows[1:]]
-        names.sort(reverse=True)
-        return names
+    def folder_rows(self) -> list[AlmasMovieFileServerTableRow]:
+        return [row for row in self.rows[1:] if not row.is_file]
 
     @property
     def has_file(self) -> bool:
@@ -85,9 +104,7 @@ class AlmasMovieFileServerTable:
     def first_file_row(self) -> AlmasMovieFileServerTableRow:
         if not self.has_file:
             raise RuntimeError('There is no file row in table')
-        for row in self.rows:
-            if row.is_file:
-                return row
+        return self.file_rows[0]
 
     @staticmethod
     def from_raw_data(raw_data: list[list[str]]) -> 'AlmasMovieFileServerTable':
@@ -103,6 +120,10 @@ class AlmasMovieFileServerPage:
         self.table = table
 
     @property
+    def normalized_path_name(self) -> str:
+        return self.path.replace('%20', ' ')
+
+    @property
     def movie_title(self) -> str:
         if not self.table.has_file:
             raise RuntimeError('Page does not have any file for extracting movie title')
@@ -113,15 +134,34 @@ class AlmasMovieFileServerPage:
 
     @property
     def movie_year(self) -> str:
-        return self.path.split('/')[1]
+        return self.normalized_path_name.split('/')[1]
 
     def extract_movie_version_from_file_name(self, file_name: str) -> str:
         if not self.__can_extract_movie_data_from_file_name(file_name):
             return file_name
         return file_name.split(self.movie_year)[1].strip()
 
+    @property
+    def series_title(self) -> str:
+        self.__validate_series_data_are_valid()
+        return self.normalized_path_name.split('/')[2]
+
+    @property
+    def season_number(self) -> str:
+        self.__validate_series_data_are_valid()
+        return self.normalized_path_name.split('/')[3]
+
+    @property
+    def episodes_version(self):
+        self.__validate_series_data_are_valid()
+        return self.normalized_path_name.split('/')[4]
+
+    def __validate_series_data_are_valid(self) -> None:
+        if  5 > len(self.normalized_path_name.split('/')):
+            raise PageHasInvalidSeriesData()
+
     def __find_a_row_to_extract_movie_data(self) -> AlmasMovieFileServerTableRow | None:
-        for row in self.table.rows:
+        for row in self.table.file_rows:
             if self.__can_extract_movie_data_from_file_name(row.name):
                 return row
         return None
@@ -135,7 +175,10 @@ class AlmasMovieFileServer:
         self.base_url = base_url
 
     def get_table_of_page(self, path: str) -> AlmasMovieFileServerTable:
+        if 0 < len(path) and '/' == path[0]:
+            path = path[1:]
         url = f"{self.base_url}/{path}"
+        url = url.replace(' ', '%20')
         with urllib.request.urlopen(url) as response:
             html = response.read().decode("utf-8")
         parser = _TableParser()
@@ -143,12 +186,13 @@ class AlmasMovieFileServer:
         return AlmasMovieFileServerTable.from_raw_data(parser.get_table())
 
 
-class AlmasMovieSource(MovieSource):
-    def __init__(self, file_server_base_urls: list[str]):
-        self.__file_server_base_urls = file_server_base_urls
+class AlmasMovieSource(MovieSource, SeriesSource):
+    def __init__(self, movie_file_servers_base_url: list[str], series_file_servers_base_url: list[str]):
+        self.__movie_file_servers_base_url = movie_file_servers_base_url
+        self.__series_file_servers_base_url = series_file_servers_base_url
 
     def find_movies(self) -> tuple[list[Movie], list[MissedMovie]]:
-        file_servers = [AlmasMovieFileServer(base_url) for base_url in self.__file_server_base_urls]
+        file_servers = [AlmasMovieFileServer(base_url) for base_url in self.__movie_file_servers_base_url]
 
         movies: list[Movie] = []
         missed_movies: list[MissedMovie] = []
@@ -158,6 +202,19 @@ class AlmasMovieSource(MovieSource):
             missed_movies.extend(server_missed_movies)
 
         return movies, missed_movies
+
+    def find_series(self) -> tuple[list[Series], list[MissedSeries]]:
+        file_servers = [AlmasMovieFileServer(base_url) for base_url in self.__series_file_servers_base_url]
+
+        series: list[Series] = []
+        missed_series: list[MissedSeries] = []
+        for file_server in file_servers:
+            server_series, server_missed_series = self.__find_series_from_file_server(file_server)
+            series.extend(server_series)
+            missed_series.extend(server_missed_series)
+
+        return series, missed_series
+
 
     def __find_movies_from_file_server(self, file_server: AlmasMovieFileServer) -> tuple[list[Movie], list[MissedMovie]]:
         movies: list[Movie] = []
@@ -180,25 +237,71 @@ class AlmasMovieSource(MovieSource):
 
         return movies, missed_movies
 
-    def __get_pages_of_depth(self, file_server: AlmasMovieFileServer, depth: int, current_path: str = '') -> list[AlmasMovieFileServerPage]:
+    def __find_series_from_file_server(self, file_server: AlmasMovieFileServer) -> tuple[list[Series], list[MissedSeries]]:
+        series_map: dict[str, Series] = {}
+        missed_series: list[MissedSeries] = []
+
+        episodes_links_pages: list[AlmasMovieFileServerPage] = self.__get_pages_of_depth(file_server, 4)
+        for page in episodes_links_pages:
+            if not page.table.has_file:
+                missed_series.append(MissedSeries(f'{file_server.base_url}{page.path}', EpisodePageHasNoData()))
+                continue
+
+            try:
+                if not page.series_title in series_map:
+                    series_map[page.series_title] = Series(page.series_title, [])
+                series: Series = series_map[page.series_title]
+
+                season_number = SeasonNumber.from_string(page.season_number)
+                if not series.has_season_number(season_number):
+                    series.add_new_season(season_number)
+                season: Season = series.get_season(season_number)
+            except Exception as error:
+                missed_series.append(MissedSeries(f'{file_server.base_url}{page.path}', error))
+                continue
+
+            for row in page.table.file_rows:
+                try:
+                    episode_number = EpisodeNumber.from_string(row.episode_number)
+                    if not season.has_episode_number(episode_number):
+                        season.add_new_episode(episode_number)
+                    episode: Episode = season.get_episode(episode_number)
+                    episode.add_link(Link(
+                        f'{file_server.base_url}{page.path}/{row.name}',
+                        page.episodes_version,
+                        FileSize.from_string(row.size)
+                    ))
+                except Exception as error:
+                    missed_series.append(MissedSeries(f'{file_server.base_url}{page.path}/{row.name}', error))
+                    continue
+
+        return list(series_map.values()), missed_series
+
+    @staticmethod
+    def __get_pages_of_depth(file_server: AlmasMovieFileServer, depth: int, current_path: str = '') -> list[AlmasMovieFileServerPage]:
         pages: list[AlmasMovieFileServerPage] = []
 
         lock = Lock()
         queue = Queue()
         def worker() -> None:
             while True:
+                t = threading.current_thread().name
                 try:
                     max_depth, path = queue.get(timeout=0.5)
+                    print(f'{t} {path} {max_depth}')
                 except Empty:
                     return
                 try:
                     table: AlmasMovieFileServerTable = file_server.get_table_of_page(path)
-                    if 0 == max_depth or table.has_file:
+                    if 0 == max_depth:
                         with lock:
                             pages.append(AlmasMovieFileServerPage(path, table))
                     else:
-                        for name in table.column_name_sorted:
-                            queue.put((max_depth - 1, f"{path}/{name}"))
+                        if table.has_file:
+                            with lock:
+                                pages.append(AlmasMovieFileServerPage(path, table))
+                        for folder in table.folder_rows:
+                            queue.put((max_depth - 1, f"{path}/{folder.name}"))
                 except Exception as e:
                     print(f'{threading.current_thread().name} encounters an error: {e}.')
                     continue
