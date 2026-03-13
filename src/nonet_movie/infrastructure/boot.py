@@ -3,7 +3,6 @@ from pydm import ServiceContainer, InMemoryParametersBag
 from .console.command import ConsoleCommandHandler
 from .console.commands.discover import DiscoverCommandHandler
 from .console.commands.discovery_series import DiscoverSeriesCommandHandler
-from .console.commands.get_episodes import GetEpisodeCommandHandler
 from .console.commands.search import SearchCommandHandler
 from .console.commands.search_series import SearchSeriesCommandHandler
 from .movie_source.almas_movie import AlmasMovieSource
@@ -21,7 +20,6 @@ PARAMETERS: dict[str, str] = {
         'search': SearchCommandHandler,
         'discover': DiscoverCommandHandler,
         'search-series': SearchSeriesCommandHandler,
-        'get-episodes': GetEpisodeCommandHandler,
         'discover-series': DiscoverSeriesCommandHandler,
     },
     'JSON_DB_PATH': 'storage/',
