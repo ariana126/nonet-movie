@@ -75,11 +75,12 @@ class AlmasMovieFileServerTableRow:
 
     @property
     def episode_number(self) -> str:
-        matches = re.findall(r"E\d{2}", self.name)
-        if 0 == len(matches) :
-            # TODO: Use custom exception
-            raise RuntimeError('Could not parse episode number')
-        return matches[0]
+        episode_number_patterns: list[str] = [r'E\d{2}', r'Ep\d{2}', r'ep\d{2}', r'E\d{2}', r'e\d{2}']
+        for pattern in episode_number_patterns:
+            matches = re.findall(pattern, self.name)
+            if 0 < len(matches):
+                return f'E{matches[0][-2:]}'
+        raise RuntimeError('Could not parse episode number')
 
 class AlmasMovieFileServerTable:
     def __init__(self, rows: list[AlmasMovieFileServerTableRow]):
@@ -143,22 +144,28 @@ class AlmasMovieFileServerPage:
 
     @property
     def series_title(self) -> str:
-        self.__validate_series_data_are_valid()
-        return self.normalized_path_name.split('/')[2]
+        if 3 > len(self.__path_parts):
+            raise PageHasInvalidSeriesData()
+        return self.__path_parts[2]
 
     @property
     def season_number(self) -> str:
-        self.__validate_series_data_are_valid()
-        return self.normalized_path_name.split('/')[3]
+        if 4 > len(self.__path_parts):
+            return 'S01'
+        match = re.findall(r'S\d{2}', self.__path_parts[3])
+        if 0 == len(match):
+            return 'S01'
+        return match[0]
 
     @property
     def episodes_version(self):
-        self.__validate_series_data_are_valid()
-        return self.normalized_path_name.split('/')[4]
+        if 3 == len(self.__path_parts):
+            return 'Not Specified'
+        return self.__path_parts[-1]
 
-    def __validate_series_data_are_valid(self) -> None:
-        if  5 > len(self.normalized_path_name.split('/')):
-            raise PageHasInvalidSeriesData()
+    @property
+    def __path_parts(self) -> list[str]:
+        return self.normalized_path_name.split('/')
 
     def __find_a_row_to_extract_movie_data(self) -> AlmasMovieFileServerTableRow | None:
         for row in self.table.file_rows:
@@ -285,10 +292,8 @@ class AlmasMovieSource(MovieSource, SeriesSource):
         queue = Queue()
         def worker() -> None:
             while True:
-                t = threading.current_thread().name
                 try:
                     max_depth, path = queue.get(timeout=0.5)
-                    print(f'{t} {path} {max_depth}')
                 except Empty:
                     return
                 try:
