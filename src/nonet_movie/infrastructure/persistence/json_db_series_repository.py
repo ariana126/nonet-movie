@@ -26,9 +26,9 @@ class JsonDBSeriesRepository(SeriesRepository):
     def search_in_title(self, title: str) -> list[Series]:
         records = self.db.load(self.__COLLECTION_NAME)
         matches: list[Series] = []
-        for record in records.values():
+        for id_, record in records.items():
             if title.lower() in record["title"].lower():
-                matches.append(self.__deserialize(self.__fetch_relations(record)))
+                matches.append(self.__deserialize(id_, self.__fetch_relations(record)))
         return matches
 
     def find(self, id_: Identity) -> Series|None:
@@ -36,7 +36,7 @@ class JsonDBSeriesRepository(SeriesRepository):
         if not id_.as_string in records:
             return None
         rich_record = self.__fetch_relations(records[id_.as_string])
-        return self.__deserialize(rich_record)
+        return self.__deserialize(id_.as_string, rich_record)
 
     def save(self, series: Series) -> None:
         self.db.open_transaction()
@@ -76,14 +76,14 @@ class JsonDBSeriesRepository(SeriesRepository):
         return series_record
 
     @staticmethod
-    def __deserialize(record: dict) -> Series:
+    def __deserialize(id_: str, record: dict) -> Series:
         seasons: list[Season] = [
-            Season(season_id, SeasonNumber.from_string(season_data["number"]), [
-                Episode(episode_id, EpisodeNumber.from_string(episode_data["number"]), [
+            Season(Identity.from_string(id_), SeasonNumber.from_string(season_data["number"]), [
+                Episode(season_id, EpisodeNumber.from_string(episode_data["number"]), [
                     Link(link_data["url"], link_data["version"], FileSize.from_string(link_data["size"]))
                     for link_data in episode_data["links"]
                 ])
-                for episode_id, episode_data in season_data["episodes"].items()
+                for episode_data in season_data["episodes"].values()
             ])
             for season_id, season_data in record["seasons"].items()
         ]

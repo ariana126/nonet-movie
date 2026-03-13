@@ -76,6 +76,9 @@ class Episode(Entity):
                 return
         self.__links.append(link)
 
+    def __repr__(self):
+        return f'Episode({self.__season_id}, {self.__number}, {self.__links})'
+
 
 class Season(Entity):
     def __init__(self, series_id: Identity, number: SeasonNumber, episodes: list[Episode]):
@@ -124,6 +127,8 @@ class Season(Entity):
                 return True
         return False
 
+    def __repr__(self):
+        return f'Season({self.__series_id}, {self.__number}, {self.__episodes})'
 
 class Series(AggregateRoot):
     def __init__(self, title: str, seasons: list[Season]):
@@ -169,3 +174,6 @@ class Series(AggregateRoot):
             if season.equals(existing_seasons):
                 return True
         return False
+
+    def __repr__(self):
+        return f'Series(title: {self.title}, seasons: {self.__seasons})'

@@ -82,6 +82,7 @@ class AlmasMovieFileServerTableRow:
                 return f'E{matches[0][-2:]}'
         raise RuntimeError('Could not parse episode number')
 
+
 class AlmasMovieFileServerTable:
     def __init__(self, rows: list[AlmasMovieFileServerTableRow]):
         self.rows = rows
@@ -221,7 +222,6 @@ class AlmasMovieSource(MovieSource, SeriesSource):
             missed_series.extend(server_missed_series)
 
         return series, missed_series
-
 
     def __find_movies_from_file_server(self, file_server: AlmasMovieFileServer) -> tuple[list[Movie], list[MissedMovie]]:
         movies: list[Movie] = []
