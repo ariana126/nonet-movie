@@ -1,6 +1,7 @@
-from rich.console import Console
-from rich.table import Table
+import questionary
+from questionary import Choice, select
 
+from ..transformation import present_links
 from ....application.search import SearchMovieUseCase
 from ....domain.movie import Movie
 from ....infrastructure.console.command import CommandHandler
@@ -18,19 +19,8 @@ class SearchCommandHandler(CommandHandler):
         name: str = args[0]
 
         movies: list[Movie] = self.__use_case.execute(name)
-        for movie in movies:
-            self.__present_movie(movie)
+        if 0 == len(movies):
+            return
 
-    @staticmethod
-    def __present_movie(movie: Movie) -> None:
-        console = Console()
-        table = Table(title=f"{movie.title} ({movie.year})")
-
-        table.add_column("version", style="cyan")
-        table.add_column("size", style="magenta")
-        table.add_column("url", overflow="fold", style="green")
-
-        for link in movie.links:
-            table.add_row(link.version, link.size.as_string, link.url)
-
-        console.print(table, justify="center")
+        movie: Movie = select('', choices=[Choice(f'{movie.title} ({movie.year})', value=movie) for movie in movies]).ask()
+        present_links(f'{movie.title} ({movie.year})', movie.links)
