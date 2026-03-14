@@ -1,9 +1,9 @@
-from questionary import Choice, select
+from questionary import text
 
 from src.nonet_movie.application.series_search import SearchSeriesUseCase
 from src.nonet_movie.domain import Series, Season, Episode
 from src.nonet_movie.infrastructure.console.command import CommandHandler
-from src.nonet_movie.infrastructure.console.transformation import present_links
+from src.nonet_movie.infrastructure.console.presentation import present_links, TerminalFilesPresenter, TerminalFolder
 
 
 class SearchSeriesCommandHandler(CommandHandler):
@@ -12,17 +12,30 @@ class SearchSeriesCommandHandler(CommandHandler):
 
     @property
     def args(self) -> tuple[str]:
-        return ('name',)
+        return tuple()
 
     def handle(self, args: list[str]) -> None:
-        name: str = args[0]
+        name: str = text('title: ').ask()
 
         series_list: list[Series] = self.__use_case.execute(name)
         if 0 == len(series_list):
             return
 
-        series: Series = select('', choices=[Choice(s.title, value=s) for s in series_list]).ask()
-        season: Season = select('', choices=[Choice(season.number.as_string, value=season) for season in series.seasons]).ask()
-        episode: Episode = select('', choices=[Choice(episode.number.as_string, value=episode) for episode in season.episodes]).ask()
+        with TerminalFilesPresenter() as presenter:
+            presenter.present_folders([
+                TerminalFolder(series.title, self.__present_seasons, series.seasons, presenter)
+                for series in series_list
+            ])
 
-        present_links(episode.id.as_string, episode.links)
+    def __present_seasons(self, seasons: list[Season], presenter: TerminalFilesPresenter) -> None:
+        presenter.present_folders([
+            TerminalFolder(season.number.as_string, self.__present_episodes, season.episodes, presenter)
+            for season in seasons
+        ])
+
+    @staticmethod
+    def __present_episodes(episodes: list[Episode], presenter: TerminalFilesPresenter) -> None:
+        presenter.present_folders([
+            TerminalFolder(episode.number.as_string, present_links, episode.id.as_string, episode.links)
+            for episode in episodes
+        ])

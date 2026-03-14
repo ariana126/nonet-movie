@@ -1,7 +1,6 @@
-import questionary
-from questionary import Choice, select
+from questionary import text
 
-from ..transformation import present_links
+from ..presentation import present_links, TerminalFilesPresenter, TerminalFolder
 from ....application.search import SearchMovieUseCase
 from ....domain.movie import Movie
 from ....infrastructure.console.command import CommandHandler
@@ -13,14 +12,17 @@ class SearchCommandHandler(CommandHandler):
 
     @property
     def args(self) -> tuple[str]:
-        return ('name',)
+        return tuple()
 
     def handle(self, args: list[str]) -> None:
-        name: str = args[0]
+        name: str = text('title: ').ask()
 
         movies: list[Movie] = self.__use_case.execute(name)
         if 0 == len(movies):
             return
 
-        movie: Movie = select('', choices=[Choice(f'{movie.title} ({movie.year})', value=movie) for movie in movies]).ask()
-        present_links(f'{movie.title} ({movie.year})', movie.links)
+        with TerminalFilesPresenter() as presenter:
+            presenter.present_folders([
+                TerminalFolder(f'{movie.title} ({movie.year})', present_links, f'{movie.title} ({movie.year})', movie.links)
+                for movie in movies
+            ])
