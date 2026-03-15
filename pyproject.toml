@@ -12,7 +12,10 @@ license = { text = "MIT" }
 dependencies = [
     "underpyx",
     "pydmpro",
-    "dddx"
+    "dddx",
+    "rich",
+    "questionary",
+    "prompt-toolkit",
 ]
 
 [project.optional-dependencies]
