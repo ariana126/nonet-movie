@@ -201,6 +201,8 @@ class AlmasMovieFileServer:
             options[CurlOpt.RESOLVE] = [f"{self.__host}:{self.__ip}"]
         response = requests.get(url, curl_options=options)
 
+        logger.info(f'Fetched {response.url} successfully', extra={'ip': self.__ip})
+
         parser = _TableParser()
         parser.feed(response.text)
 
@@ -319,11 +321,13 @@ class AlmasMovieSource(MovieSource, SeriesSource):
         queue = Queue()
         def worker() -> None:
             while True:
+                thread_name: str = threading.current_thread().name
                 try:
                     max_depth, path = queue.get(timeout=0.5)
                 except Empty:
                     return
                 try:
+                    logger.info(f'{thread_name} processing {path}')
                     table: AlmasMovieFileServerTable = file_server.get_table_of_page(path)
                     if 0 == max_depth:
                         with lock:
@@ -335,7 +339,7 @@ class AlmasMovieSource(MovieSource, SeriesSource):
                         for folder in table.folder_rows:
                             queue.put((max_depth - 1, f"{path}/{folder.name}"))
                 except Exception as e:
-                    logger.error(f'{threading.current_thread().name} encounters an error.', extra={'error': e, 'path': path})
+                    logger.error(f'{thread_name} encounters an error.', extra={'error': e, 'path': path})
                     logger.exception(e)
                     continue
                 finally:
