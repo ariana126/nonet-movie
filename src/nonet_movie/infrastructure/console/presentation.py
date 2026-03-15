@@ -29,7 +29,6 @@ class TerminalMenuItem:
 class TerminalPresenter:
     def __init__(self):
         self.console = Console()
-        self.menu_pointer = '>' if os.name == 'nt' else '❯'
         self.footer_keywords = [
             TerminalMenuItem('~ Back', Fn(self.__present_previous_page)),
             TerminalMenuItem('~ Return to home', Fn(self.__present_first_page)),
@@ -74,7 +73,7 @@ class TerminalPresenter:
         item: TerminalMenuItem = select(
             qmark='',
             message=title,
-            pointer=self.menu_pointer,
+            pointer=self.__menu_pointer,
             choices=_choices,
             style=self.style
         ).ask()
@@ -115,8 +114,16 @@ class TerminalPresenter:
             start = time.perf_counter()
             while not self.timer_stop_event.is_set():
                 elapsed = time.perf_counter() - start
+                formatted_time = str(timedelta(seconds=elapsed))
+                self.console.print(f"[bold cyan][/bold cyan]{formatted_time}", end="\r")
+                time.sleep(0.01)
+
+        def timer_in_windows():
+            start = time.perf_counter()
+            while not self.timer_stop_event.is_set():
+                elapsed = time.perf_counter() - start
                 formatted_time = str(timedelta(seconds=elapsed)).split('.')[0]
-                timer_label = f"Elapsed: {formatted_time}"
+                timer_label = f"{formatted_time}"
                 width = max(1, self.console.size.width - 1)
                 padded_line = timer_label[:width].ljust(width)
                 self.console.file.write(f"\r{padded_line}")
@@ -125,14 +132,18 @@ class TerminalPresenter:
 
             self.__clear_timer_line()
 
-        self.timer_thread = threading.Thread(target=timer, daemon=True)
+        if self.__is_running_on_windows():
+            self.timer_thread = threading.Thread(target=timer_in_windows, daemon=True)
+        else:
+            self.timer_thread = threading.Thread(target=timer, daemon=True)
         self.timer_thread.start()
 
     def stop_timer(self) -> None:
         self.timer_stop_event.set()
         if self.timer_thread:
             self.timer_thread.join(timeout=1)
-        self.__clear_timer_line()
+        if self.__is_running_on_windows():
+            self.__clear_timer_line()
 
     def __present_page_title(self):
         if 0 == len(self.page_stack):
@@ -150,7 +161,7 @@ class TerminalPresenter:
         keyword: TerminalMenuItem = select(
             qmark='',
             message='',
-            pointer=self.menu_pointer,
+            pointer=self.__menu_pointer,
             choices=_choices,
             style=self.style
         ).ask()
@@ -193,10 +204,18 @@ class TerminalPresenter:
 
     def __clear_screen(self) -> None:
         self.console.clear()
-        if os.name == 'nt':
+        if self.__is_running_on_windows():
             os.system('cls')
 
     def __clear_timer_line(self) -> None:
         width = max(1, self.console.size.width - 1)
         self.console.file.write(f"\r{' ' * width}\r")
         self.console.file.flush()
+
+    @property
+    def __menu_pointer(self):
+        return '>' if self.__is_running_on_windows() else '❯'
+
+    @staticmethod
+    def __is_running_on_windows() -> bool:
+        return 'nt' == os.name
