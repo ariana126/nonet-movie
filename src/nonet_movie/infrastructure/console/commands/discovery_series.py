@@ -5,23 +5,26 @@ from rich.table import Table
 
 from src.nonet_movie.application.series_discovery import DiscoverNewSeriesUseCase, SeriesDiscoveryReport
 from src.nonet_movie.infrastructure.console.command import Command
-from src.nonet_movie.infrastructure.console.presentation import start_timer
+from src.nonet_movie.infrastructure.console.presentation import TerminalPresenter
 
 
 class DiscoverSeriesCommand(Command):
-    def __init__(self, use_case: DiscoverNewSeriesUseCase) -> None:
+    def __init__(self, use_case: DiscoverNewSeriesUseCase, presenter: TerminalPresenter) -> None:
         self.__use_case = use_case
+        self.__presenter = presenter
 
     @staticmethod
     def description() -> str:
-        return 'Discover new series'
+        return 'Add new series'
 
     def execute(self) -> None:
-        start_timer()
+        self.__presenter.start_timer()
 
         started_at: datetime = datetime.now()
         report: SeriesDiscoveryReport = self.__use_case.execute()
         finished_at: datetime = datetime.now()
+
+        self.__presenter.stop_timer()
 
         console = Console()
 

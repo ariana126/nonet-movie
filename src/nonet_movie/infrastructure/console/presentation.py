@@ -5,27 +5,12 @@ from typing import Callable, ParamSpec, TypeVar, Any
 
 from prompt_toolkit.styles import Style
 from questionary import select, Choice, Separator, text
-from rich.align import Align
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
 from src.nonet_movie.domain import Link
-
-
-def start_timer() -> None:
-    console = Console()
-    def timer():
-        start = time.perf_counter()
-        while True:
-            elapsed = time.perf_counter() - start
-            formatted_time = str(timedelta(seconds=elapsed))
-            console.print(f"[bold cyan][/bold cyan]{formatted_time}", end="\r")
-            time.sleep(0.01)
-
-    t = threading.Thread(target=timer, daemon=True)
-    t.start()
 
 
 P = ParamSpec("P")
@@ -67,6 +52,7 @@ class TerminalPresenter:
         ]
         self.has_presentation_ended = False
         self.page_stack: list[TerminalPage] = []
+        self.timer_stop_event: threading.Event = threading.Event()
         self.style = Style([
             ('qmark', 'fg:#00ffcc bold'),
             ('question', 'bold fg:#ffffff'),
@@ -127,6 +113,21 @@ class TerminalPresenter:
             expand=False,
             padding=(0, 15),
         ))
+
+    def start_timer(self) -> None:
+        self.timer_stop_event.clear()
+        def timer():
+            start = time.perf_counter()
+            while not self.timer_stop_event.is_set():
+                elapsed = time.perf_counter() - start
+                formatted_time = str(timedelta(seconds=elapsed))
+                self.console.print(f"[bold cyan][/bold cyan]{formatted_time}", end="\r")
+                time.sleep(0.01)
+
+        threading.Thread(target=timer, daemon=True).start()
+
+    def stop_timer(self) -> None:
+        self.timer_stop_event.set()
 
     def __present_page_title(self):
         if 0 == len(self.page_stack):

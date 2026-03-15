@@ -4,23 +4,26 @@ from rich.table import Table
 
 from src.nonet_movie.application.discovery import DiscoverNewMoviesUseCase, DiscoveryReport
 from src.nonet_movie.infrastructure.console.command import Command
-from src.nonet_movie.infrastructure.console.presentation import start_timer
+from src.nonet_movie.infrastructure.console.presentation import TerminalPresenter
 
 
 class DiscoverCommand(Command):
-    def __init__(self, use_case: DiscoverNewMoviesUseCase):
+    def __init__(self, use_case: DiscoverNewMoviesUseCase, presenter: TerminalPresenter):
         self.__use_case = use_case
+        self.__presenter = presenter
 
     @staticmethod
     def description() -> str:
         return 'Add new movies'
 
     def execute(self) -> None:
-        start_timer()
+        self.__presenter.start_timer()
 
         started_at: datetime = datetime.now()
         report: DiscoveryReport = self.__use_case.execute()
         finished_at: datetime = datetime.now()
+
+        self.__presenter.stop_timer()
 
         console = Console()
 
