@@ -1,7 +1,6 @@
 import threading
 import time
 from datetime import timedelta
-from typing import Callable, ParamSpec, TypeVar, Any
 
 from prompt_toolkit.styles import Style
 from questionary import select, Choice, Separator, text
@@ -9,25 +8,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+from underpy import Fn
 
 from src.nonet_movie.domain import Link
-
-
-P = ParamSpec("P")
-R = TypeVar("R")
-class Fn:
-    def __init__(self, callback: Callable[P, R], *callback_args: P.args, **callback_kwargs: P.kwargs):
-        self.callback = callback
-        self.callback_args = callback_args
-        self.callback_kwargs = callback_kwargs
-
-    def call(self) -> R:
-        return self.callback(*self.callback_args, **self.callback_kwargs)
-
-    def is_function(self, function: Callable[P, R]) -> bool:
-        if hasattr(self.callback, "__func__") and hasattr(function, "__func__"):
-            return getattr(self.callback, "__func__") is getattr(function, "__func__")
-        return self.callback is function
 
 
 class TerminalPage:

@@ -1,4 +1,6 @@
-from ..presentation import TerminalPresenter, TerminalMenuItem, Fn, TerminalPage
+from underpy import Fn
+
+from ..presentation import TerminalPresenter, TerminalMenuItem
 from ....application.search import SearchMovieUseCase
 from ....domain.movie import Movie
 from ....infrastructure.console.command import Command
