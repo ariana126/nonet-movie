@@ -1,7 +1,7 @@
 from ddd.domain import AggregateRoot, Entity, ValueObject
 from ddd.domain.value import Identity
 
-from src.nonet_movie.domain import Link
+from nonet_movie.domain import Link
 
 class EpisodeNumber(ValueObject):
     def __init__(self, number: int) -> None:

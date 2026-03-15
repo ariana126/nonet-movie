@@ -1,7 +1,7 @@
 from underpy import ServiceClass
 
-from src.nonet_movie.domain.movie import Movie
-from src.nonet_movie.domain.service.movie_repositoy import MovieRepository
+from nonet_movie.domain.movie import Movie
+from nonet_movie.domain.service.movie_repositoy import MovieRepository
 
 
 class SearchMovieUseCase(ServiceClass):

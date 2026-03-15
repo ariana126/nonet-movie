@@ -1,6 +1,6 @@
-from src.nonet_movie.application.series_source import SeriesSourcesFactory, MissedSeries
-from src.nonet_movie.domain.series import Series
-from src.nonet_movie.domain.service.series_repository import SeriesRepository
+from nonet_movie.application.series_source import SeriesSourcesFactory, MissedSeries
+from nonet_movie.domain.series import Series
+from nonet_movie.domain.service.series_repository import SeriesRepository
 
 
 class SeriesDiscoveryReport:

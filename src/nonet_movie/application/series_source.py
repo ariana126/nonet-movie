@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.nonet_movie.domain.series import Series
+from nonet_movie.domain.series import Series
 
 class MissedSeries:
     def __init__(self, series_url: str, error: Exception):

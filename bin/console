@@ -9,8 +9,8 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from pydm import ServiceContainer
 
-from src.nonet_movie.infrastructure.boot import boot
-from src.nonet_movie.infrastructure.console.console_command_handler import ConsoleCommandHandler
+from nonet_movie.infrastructure.boot import boot
+from nonet_movie.infrastructure.console.console_command_handler import ConsoleCommandHandler
 
 
 def main() -> None:

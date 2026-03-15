@@ -10,7 +10,7 @@ from rich.table import Table
 from rich.text import Text
 from underpy import Fn
 
-from src.nonet_movie.domain import Link
+from nonet_movie.domain import Link
 
 
 class TerminalPage:

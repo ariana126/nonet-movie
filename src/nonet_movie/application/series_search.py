@@ -1,7 +1,7 @@
 from ddd.domain.value import Identity
 
-from src.nonet_movie.domain import Series, SeasonNumber, Episode, Season, EpisodeNumber, Link
-from src.nonet_movie.domain.service.series_repository import SeriesRepository
+from nonet_movie.domain import Series, SeasonNumber, Episode, Season, EpisodeNumber, Link
+from nonet_movie.domain.service.series_repository import SeriesRepository
 
 
 class SearchSeriesUseCase:

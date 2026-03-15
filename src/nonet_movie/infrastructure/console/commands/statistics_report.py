@@ -1,11 +1,11 @@
 from rich.console import Console
 from rich.table import Table
 
-from src.nonet_movie.domain import Movie, Series, Link, Season, Episode
-from src.nonet_movie.domain.service.movie_repositoy import MovieRepository
-from src.nonet_movie.domain.service.series_repository import SeriesRepository
-from src.nonet_movie.infrastructure.console.command import Command
-from src.nonet_movie.infrastructure.console.presentation import TerminalPresenter
+from nonet_movie.domain import Movie, Series, Link, Season, Episode
+from nonet_movie.domain.service.movie_repositoy import MovieRepository
+from nonet_movie.domain.service.series_repository import SeriesRepository
+from nonet_movie.infrastructure.console.command import Command
+from nonet_movie.infrastructure.console.presentation import TerminalPresenter
 
 
 class GatherStatisticsReportCommand(Command):

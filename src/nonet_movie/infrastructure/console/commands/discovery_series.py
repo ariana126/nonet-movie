@@ -3,9 +3,9 @@ from datetime import datetime
 from rich.console import Console
 from rich.table import Table
 
-from src.nonet_movie.application.series_discovery import DiscoverNewSeriesUseCase, SeriesDiscoveryReport
-from src.nonet_movie.infrastructure.console.command import Command
-from src.nonet_movie.infrastructure.console.presentation import TerminalPresenter
+from nonet_movie.application.series_discovery import DiscoverNewSeriesUseCase, SeriesDiscoveryReport
+from nonet_movie.infrastructure.console.command import Command
+from nonet_movie.infrastructure.console.presentation import TerminalPresenter
 
 
 class DiscoverSeriesCommand(Command):

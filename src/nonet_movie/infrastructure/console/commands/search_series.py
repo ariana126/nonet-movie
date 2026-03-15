@@ -1,9 +1,9 @@
 from underpy import Fn
 
-from src.nonet_movie.application.series_search import SearchSeriesUseCase
-from src.nonet_movie.domain import Series, Season, Episode
-from src.nonet_movie.infrastructure.console.command import Command
-from src.nonet_movie.infrastructure.console.presentation import TerminalPresenter, TerminalMenuItem
+from nonet_movie.application.series_search import SearchSeriesUseCase
+from nonet_movie.domain import Series, Season, Episode
+from nonet_movie.infrastructure.console.command import Command
+from nonet_movie.infrastructure.console.presentation import TerminalPresenter, TerminalMenuItem
 
 
 class SearchSeriesCommand(Command):

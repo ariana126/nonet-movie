@@ -3,13 +3,13 @@ from typing import Type
 from pydm import ServiceContainer
 from underpy import Fn
 
-from src.nonet_movie.infrastructure.console.command import Command
-from src.nonet_movie.infrastructure.console.commands.discover import DiscoverCommand
-from src.nonet_movie.infrastructure.console.commands.discovery_series import DiscoverSeriesCommand
-from src.nonet_movie.infrastructure.console.commands.search import SearchCommand
-from src.nonet_movie.infrastructure.console.commands.search_series import SearchSeriesCommand
-from src.nonet_movie.infrastructure.console.commands.statistics_report import GatherStatisticsReportCommand
-from src.nonet_movie.infrastructure.console.presentation import TerminalPresenter, TerminalMenuItem, TerminalPage
+from nonet_movie.infrastructure.console.command import Command
+from nonet_movie.infrastructure.console.commands.discover import DiscoverCommand
+from nonet_movie.infrastructure.console.commands.discovery_series import DiscoverSeriesCommand
+from nonet_movie.infrastructure.console.commands.search import SearchCommand
+from nonet_movie.infrastructure.console.commands.search_series import SearchSeriesCommand
+from nonet_movie.infrastructure.console.commands.statistics_report import GatherStatisticsReportCommand
+from nonet_movie.infrastructure.console.presentation import TerminalPresenter, TerminalMenuItem, TerminalPage
 
 
 class ConsoleCommandHandler:

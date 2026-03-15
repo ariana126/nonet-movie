@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 
 from ddd.domain.value import Identity
 
-from src.nonet_movie.domain.movie import Movie
-from src.nonet_movie.domain.service.base_repository import TransactionalRepository
+from nonet_movie.domain.movie import Movie
+from nonet_movie.domain.service.base_repository import TransactionalRepository
 
 
 class MovieRepository(TransactionalRepository, ABC):

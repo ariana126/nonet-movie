@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.nonet_movie.domain.movie import Movie
+from nonet_movie.domain.movie import Movie
 
 
 class MissedMovie:

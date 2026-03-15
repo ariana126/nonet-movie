@@ -5,10 +5,10 @@ from html.parser import HTMLParser
 from queue import Queue, Empty
 from threading import Thread, Lock
 
-from src.nonet_movie.application.movie_source import MovieSource, MissedMovie
-from src.nonet_movie.application.series_source import SeriesSource, MissedSeries
-from src.nonet_movie.domain import Movie, Link, FileSize
-from src.nonet_movie.domain.series import Series, Episode, SeasonNumber, Season, EpisodeNumber
+from nonet_movie.application.movie_source import MovieSource, MissedMovie
+from nonet_movie.application.series_source import SeriesSource, MissedSeries
+from nonet_movie.domain import Movie, Link, FileSize
+from nonet_movie.domain.series import Series, Episode, SeasonNumber, Season, EpisodeNumber
 
 
 class MoviePageHasNoData(RuntimeError):
