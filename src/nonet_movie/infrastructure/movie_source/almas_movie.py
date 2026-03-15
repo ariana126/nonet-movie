@@ -327,7 +327,7 @@ class AlmasMovieSource(MovieSource, SeriesSource):
                 except Empty:
                     return
                 try:
-                    logger.info(f'{thread_name} processing {path}')
+                    logger.info(f'{thread_name} processing path {path}')
                     table: AlmasMovieFileServerTable = file_server.get_table_of_page(path)
                     if 0 == max_depth:
                         with lock:
