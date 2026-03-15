@@ -18,15 +18,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
       - name: Build .deb
         run: |
           chmod +x scripts/build-deb.sh
-          ./scripts/build-deb.sh
+          PYTHON_BIN=/usr/bin/python3 ./scripts/build-deb.sh
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
@@ -43,15 +38,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
       - name: Build .pkg
         run: |
           chmod +x scripts/build-macos-pkg.sh
-          ./scripts/build-macos-pkg.sh
+          PYTHON_BIN=/usr/bin/python3 ./scripts/build-macos-pkg.sh
 
       - name: Upload .pkg artifact
         uses: actions/upload-artifact@v4

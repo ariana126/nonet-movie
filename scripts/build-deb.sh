@@ -11,13 +11,23 @@ PRIORITY="${PRIORITY:-optional}"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
 WORK_DIR="$DIST_DIR/deb-work"
+PYTHON_BIN="${PYTHON_BIN:-/usr/bin/python3}"
 
 if ! command -v dpkg-deb >/dev/null 2>&1; then
   echo "dpkg-deb is required. Install with: sudo apt install dpkg-dev"
   exit 1
 fi
 
-VERSION="${VERSION:-$(python3 - <<'PY'
+if [ ! -x "$PYTHON_BIN" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v python3)"
+  else
+    echo "python3 is required but was not found."
+    exit 1
+  fi
+fi
+
+VERSION="${VERSION:-$("$PYTHON_BIN" - <<'PY'
 import pathlib
 
 project_file = pathlib.Path("pyproject.toml")
@@ -39,7 +49,7 @@ echo "Building ${PKG_NAME}_${VERSION}.deb ..."
 rm -rf "$PKG_ROOT"
 mkdir -p "$PKG_ROOT/DEBIAN" "$PKG_ROOT/usr/bin" "$PKG_ROOT/etc" "$INSTALL_ROOT"
 
-python3 -m venv "$VENV_PATH"
+"$PYTHON_BIN" -m venv "$VENV_PATH"
 "$VENV_PATH/bin/pip" install --upgrade pip setuptools wheel
 "$VENV_PATH/bin/pip" install "$PROJECT_ROOT"
 

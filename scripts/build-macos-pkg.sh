@@ -7,13 +7,23 @@ PKG_ID="${PKG_ID:-com.ariana.nonet-movie}"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
 WORK_DIR="$DIST_DIR/macos-pkg-work"
+PYTHON_BIN="${PYTHON_BIN:-/usr/bin/python3}"
 
 if ! command -v pkgbuild >/dev/null 2>&1; then
   echo "pkgbuild is required. Run this script on macOS with Xcode CLT installed."
   exit 1
 fi
 
-VERSION="${VERSION:-$(python3 - <<'PY'
+if [ ! -x "$PYTHON_BIN" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v python3)"
+  else
+    echo "python3 is required but was not found."
+    exit 1
+  fi
+fi
+
+VERSION="${VERSION:-$("$PYTHON_BIN" - <<'PY'
 import pathlib
 
 project_file = pathlib.Path("pyproject.toml")
@@ -39,7 +49,7 @@ echo "Building ${APP_NAME}-${VERSION}.pkg ..."
 rm -rf "$PKG_STAGE"
 mkdir -p "$INSTALL_ROOT" "$(dirname "$BIN_PATH")" "$(dirname "$ETC_ENV_PATH")" "$DIST_DIR"
 
-python3 -m venv "$VENV_PATH"
+"$PYTHON_BIN" -m venv "$VENV_PATH"
 "$VENV_PATH/bin/pip" install --upgrade pip setuptools wheel
 "$VENV_PATH/bin/pip" install "$PROJECT_ROOT"
 
