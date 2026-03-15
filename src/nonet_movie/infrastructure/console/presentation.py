@@ -1,3 +1,4 @@
+import os
 import threading
 import time
 from datetime import timedelta
@@ -28,6 +29,7 @@ class TerminalMenuItem:
 class TerminalPresenter:
     def __init__(self):
         self.console = Console()
+        self.menu_pointer = '>' if os.name == 'nt' else '❯'
         self.footer_keywords = [
             TerminalMenuItem('~ Back', Fn(self.__present_previous_page)),
             TerminalMenuItem('~ Return to home', Fn(self.__present_first_page)),
@@ -36,6 +38,7 @@ class TerminalPresenter:
         self.has_presentation_ended = False
         self.page_stack: list[TerminalPage] = []
         self.timer_stop_event: threading.Event = threading.Event()
+        self.timer_thread: threading.Thread | None = None
         self.style = Style([
             ('qmark', 'fg:#00ffcc bold'),
             ('question', 'bold fg:#ffffff'),
@@ -52,7 +55,7 @@ class TerminalPresenter:
             return
         self.page_stack.append(page)
 
-        self.console.clear()
+        self.__clear_screen()
         self.__present_page_title()
 
         page.loader.call()
@@ -68,7 +71,13 @@ class TerminalPresenter:
 
     def present_menu(self, items: list[TerminalMenuItem], title: str = '') -> None:
         _choices: list[Choice] = self.__get_menu_choices(items)
-        item: TerminalMenuItem = select(qmark='', message=title, pointer='❯', choices=_choices, style=self.style).ask()
+        item: TerminalMenuItem = select(
+            qmark='',
+            message=title,
+            pointer=self.menu_pointer,
+            choices=_choices,
+            style=self.style
+        ).ask()
         if self.__is_item_footer_keyword(item):
             item.callback.call()
             return
@@ -98,19 +107,32 @@ class TerminalPresenter:
         ))
 
     def start_timer(self) -> None:
+        if self.timer_thread and self.timer_thread.is_alive():
+            return
         self.timer_stop_event.clear()
+
         def timer():
             start = time.perf_counter()
             while not self.timer_stop_event.is_set():
                 elapsed = time.perf_counter() - start
-                formatted_time = str(timedelta(seconds=elapsed))
-                self.console.print(f"[bold cyan][/bold cyan]{formatted_time}", end="\r")
-                time.sleep(0.01)
+                formatted_time = str(timedelta(seconds=elapsed)).split('.')[0]
+                timer_label = f"Elapsed: {formatted_time}"
+                width = max(1, self.console.size.width - 1)
+                padded_line = timer_label[:width].ljust(width)
+                self.console.file.write(f"\r{padded_line}")
+                self.console.file.flush()
+                time.sleep(0.1)
 
-        threading.Thread(target=timer, daemon=True).start()
+            self.__clear_timer_line()
+
+        self.timer_thread = threading.Thread(target=timer, daemon=True)
+        self.timer_thread.start()
 
     def stop_timer(self) -> None:
         self.timer_stop_event.set()
+        if self.timer_thread:
+            self.timer_thread.join(timeout=1)
+        self.__clear_timer_line()
 
     def __present_page_title(self):
         if 0 == len(self.page_stack):
@@ -125,7 +147,13 @@ class TerminalPresenter:
 
     def __present_footer_keywords(self) -> None:
         _choices: list[Choice] = self.__get_menu_choices([])
-        keyword: TerminalMenuItem = select(qmark='', message='', pointer='❯', choices=_choices, style=self.style).ask()
+        keyword: TerminalMenuItem = select(
+            qmark='',
+            message='',
+            pointer=self.menu_pointer,
+            choices=_choices,
+            style=self.style
+        ).ask()
         keyword.callback.call()
 
     def __present_previous_page(self):
@@ -156,8 +184,19 @@ class TerminalPresenter:
         return False
 
     def __enter__(self):
-        self.console.clear()
+        self.__clear_screen()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop_timer()
+        self.__clear_screen()
+
+    def __clear_screen(self) -> None:
         self.console.clear()
+        if os.name == 'nt':
+            os.system('cls')
+
+    def __clear_timer_line(self) -> None:
+        width = max(1, self.console.size.width - 1)
+        self.console.file.write(f"\r{' ' * width}\r")
+        self.console.file.flush()
