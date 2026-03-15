@@ -67,26 +67,30 @@ if [ -f "$USER_ENV_FILE" ]; then
   set +a
 fi
 
-# Debian-friendly default for user-writable app data.
-JSON_DB_PATH="${JSON_DB_PATH:-${XDG_DATA_HOME:-$HOME/.local/share}/nonet-movie}"
-mkdir -p "$JSON_DB_PATH"
+# Debian-friendly defaults for user-writable app data and logs.
+JSON_DB_PATH="${JSON_DB_PATH:-$HOME/.local/share/nonet-movie/storage/}"
+LOG_PATH="${LOG_PATH:-$HOME/.local/share/nonet-movie/logs}"
+mkdir -p "$JSON_DB_PATH" "$LOG_PATH"
 export JSON_DB_PATH
+export LOG_PATH
 
 exec /opt/nonet-movie/venv/bin/python -c "
 from pydm import ServiceContainer
 from nonet_movie.infrastructure.boot import boot
-from nonet_movie.infrastructure.console.console_command_handler import ConsoleCommandHandler
+from nonet_movie.infrastructure.console.app import ConsoleApplication
 
 boot()
-ServiceContainer.get_instance().get_service(ConsoleCommandHandler).handle()
+ServiceContainer.get_instance().get_service(ConsoleApplication).run()
 " "$@"
 EOF
 chmod 0755 "$PKG_ROOT/usr/bin/$APP_NAME"
 
 cat > "$PKG_ROOT/etc/nonet-movie.env" <<'EOF'
 # System-wide defaults for nonet-movie.
-# Uncomment and customize if you want a global location:
-# JSON_DB_PATH=/var/lib/nonet-movie
+# Defaults can be overridden per user in:
+#   ~/.config/nonet-movie/env
+JSON_DB_PATH=~/.local/share/nonet-movie/storage/
+LOG_PATH=~/.local/share/nonet-movie/logs
 EOF
 
 cat > "$PKG_ROOT/DEBIAN/conffiles" <<'EOF'

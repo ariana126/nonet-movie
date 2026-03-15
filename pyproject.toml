@@ -17,6 +17,7 @@ dependencies = [
     "questionary",
     "prompt-toolkit",
     "python-dotenv",
+    "python-json-logger",
 ]
 
 [project.optional-dependencies]
