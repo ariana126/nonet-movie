@@ -7,6 +7,7 @@ from src.nonet_movie.infrastructure.console.commands.discover import DiscoverCom
 from src.nonet_movie.infrastructure.console.commands.discovery_series import DiscoverSeriesCommand
 from src.nonet_movie.infrastructure.console.commands.search import SearchCommand
 from src.nonet_movie.infrastructure.console.commands.search_series import SearchSeriesCommand
+from src.nonet_movie.infrastructure.console.commands.statistics_report import GatherStatisticsReportCommand
 from src.nonet_movie.infrastructure.console.presentation import TerminalPresenter, TerminalMenuItem, Fn, \
     TerminalPage
 
@@ -19,6 +20,7 @@ class ConsoleCommandHandler:
             SearchSeriesCommand,
             DiscoverCommand,
             DiscoverSeriesCommand,
+            GatherStatisticsReportCommand,
         ]
 
     def handle(self) -> None:
