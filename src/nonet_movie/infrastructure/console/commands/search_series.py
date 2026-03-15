@@ -2,11 +2,11 @@ from underpy import Fn
 
 from nonet_movie.application.series_search import SearchSeriesUseCase
 from nonet_movie.domain import Series, Season, Episode
-from nonet_movie.infrastructure.console.command import Command
+from nonet_movie.infrastructure.console.command import ConsoleCommand
 from nonet_movie.infrastructure.console.presentation import TerminalPresenter, TerminalMenuItem
 
 
-class SearchSeriesCommand(Command):
+class SearchSeriesCommand(ConsoleCommand):
     def __init__(self, use_case: SearchSeriesUseCase, presenter: TerminalPresenter):
         self.__use_case = use_case
         self.__presenter = presenter

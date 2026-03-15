@@ -3,10 +3,10 @@ from underpy import Fn
 from ..presentation import TerminalPresenter, TerminalMenuItem
 from ....application.search import SearchMovieUseCase
 from ....domain.movie import Movie
-from ....infrastructure.console.command import Command
+from ....infrastructure.console.command import ConsoleCommand
 
 
-class SearchCommand(Command):
+class SearchMoviesCommand(ConsoleCommand):
     def  __init__(self, use_case: SearchMovieUseCase, presenter: TerminalPresenter):
         self.__use_case = use_case
         self.__presenter = presenter

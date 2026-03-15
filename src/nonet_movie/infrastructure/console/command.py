@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class Command(ABC):
+class ConsoleCommand(ABC):
     @staticmethod
     @abstractmethod
     def description() -> str:

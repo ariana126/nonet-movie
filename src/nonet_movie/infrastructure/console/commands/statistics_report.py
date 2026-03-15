@@ -4,11 +4,11 @@ from rich.table import Table
 from nonet_movie.domain import Movie, Series, Link, Season, Episode
 from nonet_movie.domain.service.movie_repositoy import MovieRepository
 from nonet_movie.domain.service.series_repository import SeriesRepository
-from nonet_movie.infrastructure.console.command import Command
+from nonet_movie.infrastructure.console.command import ConsoleCommand
 from nonet_movie.infrastructure.console.presentation import TerminalPresenter
 
 
-class GatherStatisticsReportCommand(Command):
+class ShowStatisticsReportCommand(ConsoleCommand):
     def __init__(self, movie_repository: MovieRepository, series_repository: SeriesRepository, presenter: TerminalPresenter) -> None:
         self.__movie_repository = movie_repository
         self.__series_repository = series_repository

@@ -44,8 +44,8 @@ def configure_logger(log_path: str) -> None:
     )
     handler = RotatingFileHandler(
         f'{log_path}/app.log',
-        maxBytes=5_000_000,
-        backupCount=5
+        maxBytes=5_000_000, # 5M
+        backupCount=10
     )
 
     handler.setFormatter(formatter)

@@ -4,11 +4,11 @@ from rich.console import Console
 from rich.table import Table
 
 from nonet_movie.application.series_discovery import DiscoverNewSeriesUseCase, SeriesDiscoveryReport
-from nonet_movie.infrastructure.console.command import Command
+from nonet_movie.infrastructure.console.command import ConsoleCommand
 from nonet_movie.infrastructure.console.presentation import TerminalPresenter
 
 
-class DiscoverSeriesCommand(Command):
+class DiscoverSeriesCommand(ConsoleCommand):
     def __init__(self, use_case: DiscoverNewSeriesUseCase, presenter: TerminalPresenter) -> None:
         self.__use_case = use_case
         self.__presenter = presenter
