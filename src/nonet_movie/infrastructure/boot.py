@@ -1,6 +1,7 @@
 import logging
 import os
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 from pythonjsonlogger import json
 from dotenv import load_dotenv
@@ -20,6 +21,7 @@ def boot() -> None:
     service_container = ServiceContainer.get_instance()
 
     load_dotenv()
+    _set_default_runtime_paths()
     parameters = EnvParametersBag()
     service_container.set_parameters(parameters)
 
@@ -34,8 +36,15 @@ def boot() -> None:
     configure_logger(parameters.get('LOG_PATH'))
 
 
+def _set_default_runtime_paths() -> None:
+    data_root = Path.home() / ".local" / "share" / "nonet-movie"
+    os.environ.setdefault('JSON_DB_PATH', str(data_root / "storage"))
+    os.environ.setdefault('LOG_PATH', str(data_root / "logs"))
+
+
 def configure_logger(log_path: str) -> None:
-    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    resolved_log_path = os.path.expanduser(os.path.expandvars(log_path))
+    os.makedirs(resolved_log_path, exist_ok=True)
     logger = logging.getLogger()
 
     logger.setLevel(logging.INFO)
@@ -43,7 +52,7 @@ def configure_logger(log_path: str) -> None:
         "%(asctime)s %(levelname)s %(name)s %(message)s"
     )
     handler = RotatingFileHandler(
-        f'{log_path}/app.log',
+        os.path.join(resolved_log_path, 'app.log'),
         maxBytes=5_000_000, # ~5M
         backupCount=10
     )
