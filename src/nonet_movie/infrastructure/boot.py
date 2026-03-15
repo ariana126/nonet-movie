@@ -1,6 +1,6 @@
-from pydm import ServiceContainer, InMemoryParametersBag
+from dotenv import load_dotenv
+from pydm import ServiceContainer, EnvParametersBag
 
-from .movie_source.almas_movie import AlmasMovieSource
 from .movie_source.factory import MovieSourcesFactoryImpl, SeriesSourcesFactoryImpl
 from .persistence.json_db import JsonDB
 from .persistence.json_db_movie_repository import JsonDBMovieRepository
@@ -10,24 +10,12 @@ from ..application.series_source import SeriesSourcesFactory
 from ..domain.service.movie_repositoy import MovieRepository
 from ..domain.service.series_repository import SeriesRepository
 
-PARAMETERS: dict[str, str] = {
-    'JSON_DB_PATH': 'storage/',
-    'ALMAS_MOVIE_MOVIES_FILE_SERVERS_BASE_URLS': [
-        'https://tokyo.saymyname.website/Movies',
-        'https://berlin.saymyname.website/Movies',
-        'https://nairobi.saymyname.website/Movies',
-    ],
-    'ALMAS_MOVIE_SERIES_FILE_SERVERS_BASE_URLS': [
-        'https://rio.ggusers.com/Series',
-        'https://tokyo.ggusers.com/Series',
-        'https://nairobi.ggusers.com/Series',
-    ],
-}
-
 
 def boot():
     service_container = ServiceContainer.get_instance()
-    service_container.set_parameters(InMemoryParametersBag(PARAMETERS))
+
+    load_dotenv()
+    service_container.set_parameters(EnvParametersBag())
 
     service_container.bind_parameters(JsonDB, {'db_path': 'JSON_DB_PATH'})
 
@@ -36,8 +24,3 @@ def boot():
 
     service_container.bind(MovieSourcesFactory, MovieSourcesFactoryImpl)
     service_container.bind(SeriesSourcesFactory, SeriesSourcesFactoryImpl)
-
-    service_container.bind_parameters(AlmasMovieSource, {
-        'movie_file_servers_base_url': 'ALMAS_MOVIE_MOVIES_FILE_SERVERS_BASE_URLS',
-        'series_file_servers_base_url': 'ALMAS_MOVIE_SERIES_FILE_SERVERS_BASE_URLS',
-    })

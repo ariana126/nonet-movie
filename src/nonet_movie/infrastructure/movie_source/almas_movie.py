@@ -195,9 +195,17 @@ class AlmasMovieFileServer:
 
 
 class AlmasMovieSource(MovieSource, SeriesSource):
-    def __init__(self, movie_file_servers_base_url: list[str], series_file_servers_base_url: list[str]):
-        self.__movie_file_servers_base_url = movie_file_servers_base_url
-        self.__series_file_servers_base_url = series_file_servers_base_url
+    def __init__(self):
+        self.__movie_file_servers_base_url: list[str] = [
+            'https://tokyo.saymyname.website/Movies',
+            'https://berlin.saymyname.website/Movies',
+            'https://nairobi.saymyname.website/Movies',
+        ]
+        self.__series_file_servers_base_url: list[str] = [
+            'https://rio.ggusers.com/Series',
+            'https://tokyo.ggusers.com/Series',
+            'https://nairobi.ggusers.com/Series',
+        ]
 
     def find_movies(self) -> tuple[list[Movie], list[MissedMovie]]:
         file_servers = [AlmasMovieFileServer(base_url) for base_url in self.__movie_file_servers_base_url]

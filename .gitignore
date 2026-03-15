@@ -2,3 +2,4 @@
 __pycache__/
 storage/
 nonet_movie.egg-info/
+.env

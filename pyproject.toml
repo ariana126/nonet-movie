@@ -16,6 +16,7 @@ dependencies = [
     "rich",
     "questionary",
     "prompt-toolkit",
+    "python-dotenv",
 ]
 
 [project.optional-dependencies]
