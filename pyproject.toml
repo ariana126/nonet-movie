@@ -18,6 +18,7 @@ dependencies = [
     "prompt-toolkit",
     "python-dotenv",
     "python-json-logger",
+    "curl_cffi",
 ]
 
 [project.optional-dependencies]

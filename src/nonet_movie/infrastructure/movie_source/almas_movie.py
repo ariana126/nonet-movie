@@ -1,10 +1,13 @@
 import logging
 import re
 import threading
-import urllib.request
 from html.parser import HTMLParser
 from queue import Queue, Empty
 from threading import Thread, Lock
+from typing import Any
+from urllib.parse import urlparse
+
+from curl_cffi import requests, CurlOpt
 
 from nonet_movie.application.movie_source import MovieSource, MissedMovie
 from nonet_movie.application.series_source import SeriesSource, MissedSeries
@@ -183,36 +186,48 @@ class AlmasMovieFileServerPage:
 
 
 class AlmasMovieFileServer:
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, ip: str|None = None):
         self.base_url = base_url
+        self.__ip = ip
 
     def get_table_of_page(self, path: str) -> AlmasMovieFileServerTable:
         if 0 < len(path) and '/' == path[0]:
             path = path[1:]
         url = f"{self.base_url}/{path}"
         url = url.replace(' ', '%20')
-        with urllib.request.urlopen(url) as response:
-            html = response.read().decode("utf-8")
+
+        options: dict[int, Any] = {CurlOpt.PROXY: "", CurlOpt.HTTPPROXYTUNNEL: 0}
+        if not self.__ip is None:
+            options[CurlOpt.RESOLVE] = [f"{self.__host}:{self.__ip}"]
+        response = requests.get(url, curl_options=options)
+
         parser = _TableParser()
-        parser.feed(html)
+        parser.feed(response.text)
+
         return AlmasMovieFileServerTable.from_raw_data(parser.get_table())
+
+    @property
+    def __host(self) -> str:
+        parsed = urlparse(self.base_url)
+        port = parsed.port if parsed.port else (443 if parsed.scheme == "https" else 80)
+        return f"{parsed.hostname}:{port}"
 
 
 class AlmasMovieSource(MovieSource, SeriesSource):
     def __init__(self):
-        self.__movie_file_servers_base_url: list[str] = [
-            'https://tokyo.saymyname.website/Movies',
-            'https://berlin.saymyname.website/Movies',
-            'https://nairobi.saymyname.website/Movies',
+        self.__movie_file_servers_base_url: list[tuple[str, str]] = [
+            ('https://tokyo.saymyname.website/Movies', '185.191.77.142'),
+            ('https://berlin.saymyname.website/Movies', '185.137.27.122'),
+            ('https://nairobi.saymyname.website/Movies', '185.137.25.102'),
         ]
-        self.__series_file_servers_base_url: list[str] = [
-            'https://rio.ggusers.com/Series',
-            'https://tokyo.ggusers.com/Series',
-            'https://nairobi.ggusers.com/Series',
+        self.__series_file_servers_base_url: list[tuple[str, str]] = [
+            ('https://rio.ggusers.com/Series', '87.107.102.126'),
+            ('https://tokyo.ggusers.com/Series', '185.191.77.142'),
+            ('https://nairobi.ggusers.com/Series', '185.137.25.102'),
         ]
 
     def find_movies(self) -> tuple[list[Movie], list[MissedMovie]]:
-        file_servers = [AlmasMovieFileServer(base_url) for base_url in self.__movie_file_servers_base_url]
+        file_servers = [AlmasMovieFileServer(base_url[0], base_url[1]) for base_url in self.__movie_file_servers_base_url]
 
         movies: list[Movie] = []
         missed_movies: list[MissedMovie] = []
@@ -224,7 +239,7 @@ class AlmasMovieSource(MovieSource, SeriesSource):
         return movies, missed_movies
 
     def find_series(self) -> tuple[list[Series], list[MissedSeries]]:
-        file_servers = [AlmasMovieFileServer(base_url) for base_url in self.__series_file_servers_base_url]
+        file_servers = [AlmasMovieFileServer(base_url[0], base_url[1]) for base_url in self.__series_file_servers_base_url]
 
         series: list[Series] = []
         missed_series: list[MissedSeries] = []
