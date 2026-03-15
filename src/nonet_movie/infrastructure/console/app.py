@@ -1,3 +1,4 @@
+import logging
 from typing import Type
 
 from pydm import ServiceContainer
@@ -24,8 +25,11 @@ class ConsoleApplication:
         ]
 
     def run(self) -> None:
-        with self.__presenter as presenter:
-            presenter.present_page(TerminalPage('Home', Fn(self.__present_home_page)))
+        try:
+            with self.__presenter as presenter:
+                presenter.present_page(TerminalPage('Home', Fn(self.__present_home_page)))
+        except Exception as exception:
+            self.__handle_crash(exception)
 
     def __present_home_page(self):
         self.__presenter.present_welcome_message()
@@ -39,3 +43,10 @@ class ConsoleApplication:
     @staticmethod
     def __execute_command(command: Type[ConsoleCommand]) -> None:
         ServiceContainer.get_instance().get_service(command).execute()
+
+    @staticmethod
+    def __handle_crash(exception):
+        print('Application crashed!')
+        logger = logging.getLogger('Console Application')
+        logger.critical('Application crashed!', extra={'exception': exception})
+        logger.exception(exception)

@@ -1,3 +1,4 @@
+import logging
 import re
 import threading
 import urllib.request
@@ -9,6 +10,9 @@ from nonet_movie.application.movie_source import MovieSource, MissedMovie
 from nonet_movie.application.series_source import SeriesSource, MissedSeries
 from nonet_movie.domain import Movie, Link, FileSize
 from nonet_movie.domain.series import Series, Episode, SeasonNumber, Season, EpisodeNumber
+
+
+logger = logging.getLogger(__name__)
 
 
 class MoviePageHasNoData(RuntimeError):
@@ -316,7 +320,8 @@ class AlmasMovieSource(MovieSource, SeriesSource):
                         for folder in table.folder_rows:
                             queue.put((max_depth - 1, f"{path}/{folder.name}"))
                 except Exception as e:
-                    print(f'{threading.current_thread().name} encounters an error: {e}.')
+                    logger.error(f'{threading.current_thread().name} encounters an error.', extra={'error': e, 'path': path})
+                    logger.exception(e)
                     continue
                 finally:
                     queue.task_done()
