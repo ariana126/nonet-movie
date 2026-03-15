@@ -1,6 +1,7 @@
 .venv/
 __pycache__/
 storage/
+logs/
 nonet_movie.egg-info/
 .env
 build/
