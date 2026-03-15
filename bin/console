@@ -10,21 +10,13 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from pydm import ServiceContainer
 
 from src.nonet_movie.infrastructure.boot import boot
-from src.nonet_movie.infrastructure.console.command import ConsoleCommandHandler
+from src.nonet_movie.infrastructure.console.console_command_handler import ConsoleCommandHandler
 
 
 def main() -> None:
     boot()
 
-    command, args = parse_argv()
-    ServiceContainer.get_instance().get_service(ConsoleCommandHandler).handle(command, args)
-
-def parse_argv():
-    args = sys.argv
-    if 1 == len(args):
-        raise RuntimeError('Command name must be specified.')
-    return str(args[1]), args[2:]
-
+    ServiceContainer.get_instance().get_service(ConsoleCommandHandler).handle()
 
 if __name__ == '__main__':
     main()

@@ -1,28 +1,27 @@
-from questionary import text
-
-from ..presentation import present_links, TerminalFilesPresenter, TerminalFolder
+from ..presentation import TerminalPresenter, TerminalMenuItem, Fn, TerminalPage
 from ....application.search import SearchMovieUseCase
 from ....domain.movie import Movie
-from ....infrastructure.console.command import CommandHandler
+from ....infrastructure.console.command import Command
 
 
-class SearchCommandHandler(CommandHandler):
-    def  __init__(self, use_case: SearchMovieUseCase):
+class SearchCommand(Command):
+    def  __init__(self, use_case: SearchMovieUseCase, presenter: TerminalPresenter):
         self.__use_case = use_case
+        self.__presenter = presenter
 
-    @property
-    def args(self) -> tuple[str]:
-        return tuple()
+    @staticmethod
+    def description() -> str:
+        return 'Search movies'
 
-    def handle(self, args: list[str]) -> None:
-        name: str = text('title: ').ask()
+    def execute(self) -> None:
+        title: str = self.__presenter.get_user_input('title: ')
 
-        movies: list[Movie] = self.__use_case.execute(name)
+        movies: list[Movie] = self.__use_case.execute(title)
         if 0 == len(movies):
+            self.__presenter.present_not_found_page()
             return
 
-        with TerminalFilesPresenter() as presenter:
-            presenter.present_folders([
-                TerminalFolder(f'{movie.title} ({movie.year})', present_links, f'{movie.title} ({movie.year})', movie.links)
-                for movie in movies
-            ])
+        self.__presenter.present_menu_page(f'Founded for: {title}', [
+            TerminalMenuItem(f'{movie.title} ({movie.year})', Fn(self.__presenter.present_links, movie.links))
+            for movie in movies
+        ])

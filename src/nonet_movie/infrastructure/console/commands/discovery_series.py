@@ -4,19 +4,21 @@ from rich.console import Console
 from rich.table import Table
 
 from src.nonet_movie.application.series_discovery import DiscoverNewSeriesUseCase, SeriesDiscoveryReport
-from src.nonet_movie.infrastructure.console.command import CommandHandler
+from src.nonet_movie.infrastructure.console.command import Command
+from src.nonet_movie.infrastructure.console.presentation import start_timer
 
 
-class DiscoverSeriesCommandHandler(CommandHandler):
+class DiscoverSeriesCommand(Command):
     def __init__(self, use_case: DiscoverNewSeriesUseCase) -> None:
         self.__use_case = use_case
 
-    @property
-    def args(self) -> tuple[str]:
-        return tuple()
+    @staticmethod
+    def description() -> str:
+        return 'Discover new series'
 
-    def handle(self, args: list[str]) -> None:
-        self._start_timer()
+    def execute(self) -> None:
+        start_timer()
+
         started_at: datetime = datetime.now()
         report: SeriesDiscoveryReport = self.__use_case.execute()
         finished_at: datetime = datetime.now()

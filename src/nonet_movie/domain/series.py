@@ -63,6 +63,10 @@ class Episode(Entity):
         self.__links = links
 
     @property
+    def season_id(self) -> Identity:
+        return self.__season_id
+
+    @property
     def number(self) -> EpisodeNumber:
         return self.__number
 
@@ -86,6 +90,10 @@ class Season(Entity):
         self.__series_id = series_id
         self.__number = number
         self.__episodes = episodes
+
+    @property
+    def series_id(self) -> Identity:
+        return self.__series_id
 
     @property
     def number(self) -> SeasonNumber:
