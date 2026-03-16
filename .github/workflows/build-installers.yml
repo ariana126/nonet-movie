@@ -63,8 +63,8 @@ jobs:
           path: dist/*.deb
           if-no-files-found: error
 
-  build-macos-pkg:
-    name: Build macOS package
+  build-macos-app:
+    name: Build macOS app bundle
     runs-on: macos-latest
 
     steps:
@@ -76,24 +76,22 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Build .pkg
+      - name: Build .app
         run: |
-          chmod +x scripts/build-macos-pkg.sh
-          PYTHON_BIN=/usr/bin/python3 ./scripts/build-macos-pkg.sh
+          chmod +x scripts/build-macos-app.sh
+          PYTHON_BIN=/usr/bin/python3 ./scripts/build-macos-app.sh
 
-      - name: Verify .pkg health check
+      - name: Verify .app health check
         run: |
           shopt -s nullglob
-          pkg_files=(dist/*.pkg)
-          if [ ${#pkg_files[@]} -eq 0 ]; then
-            echo "No .pkg found in dist/ for verification."
+          app_bundles=(dist/*.app)
+          if [ ${#app_bundles[@]} -eq 0 ]; then
+            echo "No .app found in dist/ for verification."
             exit 1
           fi
 
-          sudo installer -pkg "${pkg_files[0]}" -target /
-
           set +e
-          health_output="$(/usr/local/bin/nonet-movie --health 2>&1)"
+          health_output="$("${app_bundles[0]}/Contents/MacOS/nonet-movie" --health 2>&1)"
           exit_code=$?
           set -e
           echo "$health_output"
@@ -108,11 +106,13 @@ jobs:
             exit 1
           fi
 
-      - name: Upload .pkg artifact
+      - name: Upload .app artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nonet-movie-macos-pkg
-          path: dist/*.pkg
+          name: nonet-movie-macos-app
+          path: |
+            dist/*.app
+            dist/*-macos-app.zip
           if-no-files-found: error
 
   build-windows-exe:
@@ -166,7 +166,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build-deb
-      - build-macos-pkg
+      - build-macos-app
       - build-windows-exe
     if: startsWith(github.ref, 'refs/tags/v')
 
@@ -177,11 +177,11 @@ jobs:
           name: nonet-movie-deb
           path: release-assets/deb
 
-      - name: Download .pkg artifact
+      - name: Download .app artifact
         uses: actions/download-artifact@v4
         with:
-          name: nonet-movie-macos-pkg
-          path: release-assets/pkg
+          name: nonet-movie-macos-app
+          path: release-assets/app
 
       - name: Download .exe artifact
         uses: actions/download-artifact@v4
@@ -195,5 +195,5 @@ jobs:
           generate_release_notes: true
           files: |
             release-assets/deb/*.deb
-            release-assets/pkg/*.pkg
+            release-assets/app/*-macos-app.zip
             release-assets/exe/*.exe
