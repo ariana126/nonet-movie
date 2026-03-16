@@ -46,7 +46,7 @@ echo "Building ${APP_NAME}.app ..."
 "$PYTHON_BIN" -m PyInstaller \
   --noconfirm \
   --clean \
-  --windowed \
+  --console \
   --name "$APP_NAME" \
   --distpath "$DIST_DIR" \
   --workpath "$BUILD_DIR" \
