@@ -110,7 +110,11 @@ jobs:
           fi
 
           apt-get update
-          apt-get install -y "$deb_file"
+          case "$deb_file" in
+            /*) deb_path="$deb_file" ;;
+            *) deb_path="./$deb_file" ;;
+          esac
+          apt-get install -y "$deb_path" || (dpkg -i "$deb_path" && apt-get install -f -y)
 
           set +e
           health_output="$(nonet-movie --health 2>&1)"
