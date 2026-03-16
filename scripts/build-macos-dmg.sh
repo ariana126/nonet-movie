@@ -2,6 +2,7 @@
 set -euo pipefail
 
 APP_NAME="nonet-movie"
+LAUNCHER_APP_NAME="Nonet Movie"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
 BUILD_DIR="$PROJECT_ROOT/build/pyinstaller-macos"
@@ -56,6 +57,8 @@ echo "Building ${APP_NAME} executable ..."
 BUNDLED_BIN="$DIST_DIR/$APP_NAME"
 VERSIONED_BUNDLED_BIN="$DIST_DIR/$APP_NAME-$VERSION-macos"
 DMG_STAGING_DIR="$DIST_DIR/dmg-staging"
+LAUNCHER_APP_PATH="$DMG_STAGING_DIR/$LAUNCHER_APP_NAME.app"
+LAUNCHER_SCRIPT_PATH="$DIST_DIR/$LAUNCHER_APP_NAME.applescript"
 DMG_OUTPUT="$DIST_DIR/$APP_NAME-$VERSION-macos.dmg"
 
 if [ ! -f "$BUNDLED_BIN" ]; then
@@ -68,6 +71,20 @@ chmod 0755 "$VERSIONED_BUNDLED_BIN"
 rm -rf "$DMG_STAGING_DIR"
 mkdir -p "$DMG_STAGING_DIR"
 cp "$VERSIONED_BUNDLED_BIN" "$DMG_STAGING_DIR/"
+cp "$BUNDLED_BIN" "$DMG_STAGING_DIR/$APP_NAME"
+
+cat > "$LAUNCHER_SCRIPT_PATH" <<'EOF'
+set launcherPath to POSIX path of (path to me)
+set dmgRoot to do shell script "dirname " & quoted form of launcherPath
+set cliPath to dmgRoot & "/nonet-movie"
+tell application "Terminal"
+  activate
+  do script quoted form of cliPath
+end tell
+EOF
+
+osacompile -o "$LAUNCHER_APP_PATH" "$LAUNCHER_SCRIPT_PATH"
+rm -f "$LAUNCHER_SCRIPT_PATH"
 
 rm -f "$DMG_OUTPUT"
 hdiutil create \
@@ -79,4 +96,5 @@ hdiutil create \
 
 echo "Created: $BUNDLED_BIN"
 echo "Created: $VERSIONED_BUNDLED_BIN"
+echo "Created: $LAUNCHER_APP_PATH"
 echo "Created: $DMG_OUTPUT"
