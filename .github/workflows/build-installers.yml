@@ -80,6 +80,42 @@ jobs:
           chmod +x scripts/build-macos-pkg.sh
           PYTHON_BIN=/usr/bin/python3 ./scripts/build-macos-pkg.sh
 
+      - name: Verify .pkg installs and app starts
+        run: |
+          shopt -s nullglob
+          pkg_files=(dist/*.pkg)
+          if [ ${#pkg_files[@]} -eq 0 ]; then
+            echo "No .pkg found in dist/ for verification."
+            exit 1
+          fi
+
+          sudo installer -pkg "${pkg_files[0]}" -target /
+
+          echo "Launching nonet-movie for smoke verification..."
+          /usr/local/bin/nonet-movie > /tmp/nonet-movie-smoke.log 2>&1 &
+          app_pid=$!
+          sleep 20
+
+          if kill -0 "$app_pid" 2>/dev/null; then
+            echo "nonet-movie is running; terminating process after timeout to continue pipeline."
+            kill "$app_pid"
+            sleep 2
+            if kill -0 "$app_pid" 2>/dev/null; then
+              kill -9 "$app_pid"
+            fi
+          else
+            set +e
+            wait "$app_pid"
+            exit_code=$?
+            set -e
+            if [ "$exit_code" -ne 0 ]; then
+              echo "nonet-movie exited early with code $exit_code"
+              cat /tmp/nonet-movie-smoke.log
+              exit 1
+            fi
+            echo "nonet-movie exited during timeout window with code 0."
+          fi
+
       - name: Upload .pkg artifact
         uses: actions/upload-artifact@v4
         with:
@@ -98,7 +134,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.10"
 
       - name: Build .exe
         shell: pwsh
