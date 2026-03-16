@@ -16,7 +16,8 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = ($VersionLine -split "=", 2)[1].Trim().Trim('"')
 }
 
-if (-not (Get-Command pyinstaller -ErrorAction SilentlyContinue)) {
+python -m PyInstaller --version *> $null
+if ($LASTEXITCODE -ne 0) {
     python -m pip install --upgrade pip
     python -m pip install pyinstaller
 }
@@ -27,7 +28,7 @@ python -m pip install $ProjectRoot
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 
-pyinstaller `
+python -m PyInstaller `
     --noconfirm `
     --clean `
     --onefile `
