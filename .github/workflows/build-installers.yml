@@ -68,6 +68,29 @@ jobs:
         run: |
           ./scripts/build-windows-exe.ps1
 
+      - name: Verify .exe starts without errors
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path dist -Filter *.exe | Select-Object -First 1
+          if (-not $exe) {
+            throw "No .exe found in dist/ for verification."
+          }
+
+          Write-Host "Launching $($exe.FullName) for smoke verification..."
+          $process = Start-Process -FilePath $exe.FullName -PassThru
+          Start-Sleep -Seconds 20
+          $process.Refresh()
+
+          if ($process.HasExited) {
+            if ($process.ExitCode -ne 0) {
+              throw "Installer exited early with code $($process.ExitCode)."
+            }
+            Write-Host "Installer exited during timeout window with code 0."
+          } else {
+            Write-Host "Installer is running; terminating process after timeout to continue pipeline."
+            Stop-Process -Id $process.Id -Force
+          }
+
       - name: Upload .exe artifact
         uses: actions/upload-artifact@v4
         with:
