@@ -23,6 +23,43 @@ jobs:
           chmod +x scripts/build-deb.sh
           PYTHON_BIN=/usr/bin/python3 ./scripts/build-deb.sh
 
+      - name: Verify .deb installs and app starts
+        run: |
+          shopt -s nullglob
+          deb_files=(dist/*.deb)
+          if [ ${#deb_files[@]} -eq 0 ]; then
+            echo "No .deb found in dist/ for verification."
+            exit 1
+          fi
+
+          sudo apt-get update
+          sudo apt-get install -y "./${deb_files[0]}"
+
+          echo "Launching nonet-movie for smoke verification..."
+          nonet-movie > /tmp/nonet-movie-smoke.log 2>&1 &
+          app_pid=$!
+          sleep 20
+
+          if kill -0 "$app_pid" 2>/dev/null; then
+            echo "nonet-movie is running; terminating process after timeout to continue pipeline."
+            kill "$app_pid"
+            sleep 2
+            if kill -0 "$app_pid" 2>/dev/null; then
+              kill -9 "$app_pid"
+            fi
+          else
+            set +e
+            wait "$app_pid"
+            exit_code=$?
+            set -e
+            if [ "$exit_code" -ne 0 ]; then
+              echo "nonet-movie exited early with code $exit_code"
+              cat /tmp/nonet-movie-smoke.log
+              exit 1
+            fi
+            echo "nonet-movie exited during timeout window with code 0."
+          fi
+
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
