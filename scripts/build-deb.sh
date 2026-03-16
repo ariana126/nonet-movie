@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_NAME="nonet-movie"
 PKG_NAME="nonet-movie"
-ARCH="${ARCH:-all}"
+ARCH="${ARCH:-$(dpkg --print-architecture 2>/dev/null || echo amd64)}"
 MAINTAINER="${MAINTAINER:-Ariana Maghsoudi <ariana.maghsoudi82@gmail.com>}"
 SECTION="${SECTION:-utils}"
 PRIORITY="${PRIORITY:-optional}"
@@ -11,6 +11,8 @@ PRIORITY="${PRIORITY:-optional}"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
 WORK_DIR="$DIST_DIR/deb-work"
+BUILD_DIR="$PROJECT_ROOT/build/pyinstaller-deb"
+ENTRY_POINT="$PROJECT_ROOT/scripts/windows_main.py"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 if ! command -v dpkg-deb >/dev/null 2>&1; then
@@ -43,15 +45,31 @@ PY
 
 PKG_ROOT="$WORK_DIR/${PKG_NAME}_${VERSION}"
 INSTALL_ROOT="$PKG_ROOT/opt/$APP_NAME"
-VENV_PATH="$INSTALL_ROOT/venv"
+BUNDLED_BIN="$INSTALL_ROOT/$APP_NAME"
 
 echo "Building ${PKG_NAME}_${VERSION}.deb ..."
 rm -rf "$PKG_ROOT"
 mkdir -p "$PKG_ROOT/DEBIAN" "$PKG_ROOT/usr/bin" "$PKG_ROOT/etc" "$INSTALL_ROOT"
 
-"$PYTHON_BIN" -m venv "$VENV_PATH"
-"$VENV_PATH/bin/pip" install --upgrade pip setuptools wheel
-"$VENV_PATH/bin/pip" install "$PROJECT_ROOT"
+if ! "$PYTHON_BIN" -m PyInstaller --version >/dev/null 2>&1; then
+  "$PYTHON_BIN" -m pip install --upgrade pip
+  "$PYTHON_BIN" -m pip install pyinstaller
+fi
+
+"$PYTHON_BIN" -m pip install --upgrade pip setuptools wheel
+"$PYTHON_BIN" -m pip install "$PROJECT_ROOT"
+
+mkdir -p "$BUILD_DIR"
+"$PYTHON_BIN" -m PyInstaller \
+  --noconfirm \
+  --clean \
+  --onefile \
+  --name "$APP_NAME" \
+  --distpath "$INSTALL_ROOT" \
+  --workpath "$BUILD_DIR" \
+  "$ENTRY_POINT"
+
+chmod 0755 "$BUNDLED_BIN"
 
 cat > "$PKG_ROOT/usr/bin/$APP_NAME" <<'EOF'
 #!/usr/bin/env bash
@@ -84,14 +102,7 @@ mkdir -p "$JSON_DB_PATH" "$LOG_PATH"
 export JSON_DB_PATH
 export LOG_PATH
 
-exec /opt/nonet-movie/venv/bin/python -c "
-from pydm import ServiceContainer
-from nonet_movie.infrastructure.boot import boot
-from nonet_movie.infrastructure.console.app import ConsoleApplication
-
-boot()
-ServiceContainer.get_instance().get_service(ConsoleApplication).run()
-" "$@"
+exec /opt/nonet-movie/nonet-movie "$@"
 EOF
 chmod 0755 "$PKG_ROOT/usr/bin/$APP_NAME"
 
@@ -114,8 +125,7 @@ Section: $SECTION
 Priority: $PRIORITY
 Architecture: $ARCH
 Maintainer: $MAINTAINER
-Depends: python3
-Description: Nonet Movie CLI application
+Description: Nonet Movie CLI application (bundled executable)
 EOF
 
 mkdir -p "$DIST_DIR"
