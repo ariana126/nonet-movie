@@ -143,14 +143,27 @@ jobs:
       - name: Run app health check
         run: |
           shopt -s nullglob
-          app_bundles=(verify-assets/app/*.app)
-          if [ ${#app_bundles[@]} -eq 0 ]; then
-            echo "No .app found for verification."
+          zip_files=(verify-assets/app/*-macos-app.zip)
+          if [ ${#zip_files[@]} -eq 0 ]; then
+            echo "No macOS app zip found for verification."
             exit 1
           fi
 
+          rm -rf verify-assets/app/extracted
+          mkdir -p verify-assets/app/extracted
+          ditto -x -k "${zip_files[0]}" verify-assets/app/extracted
+
+          app_bundles=(verify-assets/app/extracted/*.app)
+          if [ ${#app_bundles[@]} -eq 0 ]; then
+            echo "No .app bundle found after extracting zip."
+            exit 1
+          fi
+
+          app_bin="${app_bundles[0]}/Contents/MacOS/nonet-movie"
+          chmod +x "$app_bin"
+
           set +e
-          health_output="$("${app_bundles[0]}/Contents/MacOS/nonet-movie" --health 2>&1)"
+          health_output="$("$app_bin" --health 2>&1)"
           exit_code=$?
           set -e
           echo "$health_output"
