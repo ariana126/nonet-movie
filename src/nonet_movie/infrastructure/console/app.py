@@ -1,4 +1,5 @@
 import logging
+import sys
 from typing import Type
 
 from pydm import ServiceContainer
@@ -25,6 +26,10 @@ class ConsoleApplication:
         ]
 
     def run(self) -> None:
+        if self.__is_health_flag_set():
+            print('OK')
+            return
+
         try:
             with self.__presenter as presenter:
                 presenter.present_page(TerminalPage('Home', Fn(self.__present_home_page)))
@@ -50,3 +55,6 @@ class ConsoleApplication:
         logger = logging.getLogger('Console Application')
         logger.critical('Application crashed!', extra={'exception': exception})
         logger.exception(exception)
+
+    def __is_health_flag_set(self) -> bool:
+        return 1 < len(sys.argv) and '--health' == sys.argv[1]

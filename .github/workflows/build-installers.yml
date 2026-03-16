@@ -28,7 +28,7 @@ jobs:
           chmod +x scripts/build-deb.sh
           PYTHON_BIN=/usr/bin/python3 ./scripts/build-deb.sh
 
-      - name: Verify .deb installs and app starts
+      - name: Verify .deb health check
         run: |
           shopt -s nullglob
           deb_files=(dist/*.deb)
@@ -40,25 +40,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y "./${deb_files[0]}"
 
-          echo "Launching nonet-movie for smoke verification..."
-          nonet-movie > /tmp/nonet-movie-smoke.log 2>&1 &
-          app_pid=$!
-          sleep 20
+          set +e
+          health_output="$(nonet-movie --health 2>&1)"
+          exit_code=$?
+          set -e
+          echo "$health_output"
 
-          if kill -0 "$app_pid" 2>/dev/null; then
-            echo "nonet-movie is running; terminating process after timeout to continue pipeline."
-            kill "$app_pid"
-            sleep 2
-            if kill -0 "$app_pid" 2>/dev/null; then
-              kill -9 "$app_pid"
-            fi
-          else
-            set +e
-            wait "$app_pid"
-            exit_code=$?
-            set -e
-            echo "nonet-movie exited before timeout with code $exit_code"
-            cat /tmp/nonet-movie-smoke.log
+          if [ "$exit_code" -ne 0 ]; then
+            echo "nonet-movie --health exited with code $exit_code"
+            exit 1
+          fi
+
+          if [[ "$health_output" != *"OK"* ]]; then
+            echo "nonet-movie --health did not print OK"
             exit 1
           fi
 
@@ -87,7 +81,7 @@ jobs:
           chmod +x scripts/build-macos-pkg.sh
           PYTHON_BIN=/usr/bin/python3 ./scripts/build-macos-pkg.sh
 
-      - name: Verify .pkg installs and app starts
+      - name: Verify .pkg health check
         run: |
           shopt -s nullglob
           pkg_files=(dist/*.pkg)
@@ -98,25 +92,19 @@ jobs:
 
           sudo installer -pkg "${pkg_files[0]}" -target /
 
-          echo "Launching nonet-movie for smoke verification..."
-          /usr/local/bin/nonet-movie > /tmp/nonet-movie-smoke.log 2>&1 &
-          app_pid=$!
-          sleep 20
+          set +e
+          health_output="$(/usr/local/bin/nonet-movie --health 2>&1)"
+          exit_code=$?
+          set -e
+          echo "$health_output"
 
-          if kill -0 "$app_pid" 2>/dev/null; then
-            echo "nonet-movie is running; terminating process after timeout to continue pipeline."
-            kill "$app_pid"
-            sleep 2
-            if kill -0 "$app_pid" 2>/dev/null; then
-              kill -9 "$app_pid"
-            fi
-          else
-            set +e
-            wait "$app_pid"
-            exit_code=$?
-            set -e
-            echo "nonet-movie exited before timeout with code $exit_code"
-            cat /tmp/nonet-movie-smoke.log
+          if [ "$exit_code" -ne 0 ]; then
+            echo "nonet-movie --health exited with code $exit_code"
+            exit 1
+          fi
+
+          if [[ "$health_output" != *"OK"* ]]; then
+            echo "nonet-movie --health did not print OK"
             exit 1
           fi
 
@@ -145,7 +133,7 @@ jobs:
         run: |
           ./scripts/build-windows-exe.ps1
 
-      - name: Verify .exe starts without errors
+      - name: Verify .exe health check
         shell: pwsh
         run: |
           $exe = Get-ChildItem -Path dist -Filter *.exe | Select-Object -First 1
@@ -153,16 +141,17 @@ jobs:
             throw "No .exe found in dist/ for verification."
           }
 
-          Write-Host "Launching $($exe.FullName) for smoke verification..."
-          $process = Start-Process -FilePath $exe.FullName -PassThru
-          Start-Sleep -Seconds 20
-          $process.Refresh()
+          $healthOutput = & $exe.FullName --health 2>&1
+          $exitCode = $LASTEXITCODE
+          $healthText = ($healthOutput | Out-String).Trim()
+          Write-Host $healthText
 
-          if ($process.HasExited) {
-            throw "Installer exited before timeout with code $($process.ExitCode)."
-          } else {
-            Write-Host "Installer is running; terminating process after timeout to continue pipeline."
-            Stop-Process -Id $process.Id -Force
+          if ($exitCode -ne 0) {
+            throw "Installer --health exited with code $exitCode."
+          }
+
+          if ($healthText -notmatch 'OK') {
+            throw "Installer --health did not print OK."
           }
 
       - name: Upload .exe artifact
