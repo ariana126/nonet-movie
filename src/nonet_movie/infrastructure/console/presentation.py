@@ -203,8 +203,9 @@ class TerminalPresenter:
         self.__clear_screen()
 
     def __clear_screen(self) -> None:
-        self.console.clear()
-        if self.__is_running_on_windows():
+        if not self.__is_running_on_windows():
+            self.console.print("\033c", end="")
+        else:
             os.system('cls')
 
     def __clear_timer_line(self) -> None:
