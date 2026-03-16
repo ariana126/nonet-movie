@@ -83,7 +83,7 @@ Application logs are written to:
 Build scripts are included:
 
 - Debian package: `scripts/build-deb.sh`
-- macOS app bundle (`.dmg`): `scripts/build-macos-dmg.sh`
+- macOS package: `scripts/build-macos-pkg.sh`
 - Windows executable: `scripts/build-windows-exe.ps1`
 
 A GitHub Actions workflow (`.github/workflows/build-installers.yml`) builds installers on tag pushes (`v*`) and publishes a release.
