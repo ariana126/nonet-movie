@@ -48,7 +48,7 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Build .app
+      - name: Build .dmg
         run: |
           chmod +x scripts/build-macos-dmg.sh
           ./scripts/build-macos-dmg.sh
@@ -142,7 +142,7 @@ jobs:
           name: nonet-movie-macos-dmg
           path: verify-assets/app
 
-      - name: Mount dmg and run app health check
+      - name: Mount dmg and run executable health check
         run: |
           shopt -s nullglob
           dmg_files=(verify-assets/app/*-macos.dmg)
@@ -156,14 +156,19 @@ jobs:
           hdiutil attach "${dmg_files[0]}" -mountpoint verify-assets/app/mount -nobrowse -quiet
           trap 'hdiutil detach verify-assets/app/mount -quiet || true' EXIT
 
-          app_bundles=(verify-assets/app/mount/*.app)
-          if [ ${#app_bundles[@]} -eq 0 ]; then
-            echo "No .app bundle found inside dmg."
+          bin_candidates=(verify-assets/app/mount/nonet-movie verify-assets/app/mount/nonet-movie-*)
+          app_bin=""
+          for candidate in "${bin_candidates[@]}"; do
+            if [ -f "$candidate" ] && [ -x "$candidate" ]; then
+              app_bin="$candidate"
+              break
+            fi
+          done
+
+          if [ -z "$app_bin" ]; then
+            echo "No executable nonet-movie binary found inside dmg."
             exit 1
           fi
-
-          app_bin="${app_bundles[0]}/Contents/MacOS/nonet-movie"
-          chmod +x "$app_bin"
 
           set +e
           health_output="$("$app_bin" --health 2>&1)"

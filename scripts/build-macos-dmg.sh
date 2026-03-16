@@ -40,28 +40,34 @@ fi
 "$PYTHON_BIN" -m pip install "$PROJECT_ROOT"
 
 mkdir -p "$DIST_DIR" "$BUILD_DIR"
-rm -rf "$DIST_DIR/$APP_NAME.app" "$DIST_DIR/$APP_NAME-$VERSION.app"
+rm -rf "$DIST_DIR/$APP_NAME" "$DIST_DIR/$APP_NAME-$VERSION-macos"
 
-echo "Building ${APP_NAME}.app ..."
+echo "Building ${APP_NAME} executable ..."
 "$PYTHON_BIN" -m PyInstaller \
   --noconfirm \
   --clean \
+  --onefile \
   --console \
   --name "$APP_NAME" \
   --distpath "$DIST_DIR" \
   --workpath "$BUILD_DIR" \
   "$ENTRY_POINT"
 
-APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
-VERSIONED_APP_BUNDLE="$DIST_DIR/$APP_NAME-$VERSION.app"
+BUNDLED_BIN="$DIST_DIR/$APP_NAME"
+VERSIONED_BUNDLED_BIN="$DIST_DIR/$APP_NAME-$VERSION-macos"
 DMG_STAGING_DIR="$DIST_DIR/dmg-staging"
 DMG_OUTPUT="$DIST_DIR/$APP_NAME-$VERSION-macos.dmg"
 
-cp -R "$APP_BUNDLE" "$VERSIONED_APP_BUNDLE"
+if [ ! -f "$BUNDLED_BIN" ]; then
+  echo "Expected bundled binary was not produced: $BUNDLED_BIN"
+  exit 1
+fi
+
+cp "$BUNDLED_BIN" "$VERSIONED_BUNDLED_BIN"
+chmod 0755 "$VERSIONED_BUNDLED_BIN"
 rm -rf "$DMG_STAGING_DIR"
 mkdir -p "$DMG_STAGING_DIR"
-cp -R "$VERSIONED_APP_BUNDLE" "$DMG_STAGING_DIR/"
-ln -s /Applications "$DMG_STAGING_DIR/Applications"
+cp "$VERSIONED_BUNDLED_BIN" "$DMG_STAGING_DIR/"
 
 rm -f "$DMG_OUTPUT"
 hdiutil create \
@@ -71,6 +77,6 @@ hdiutil create \
   -format UDZO \
   "$DMG_OUTPUT"
 
-echo "Created: $APP_BUNDLE"
-echo "Created: $VERSIONED_APP_BUNDLE"
+echo "Created: $BUNDLED_BIN"
+echo "Created: $VERSIONED_BUNDLED_BIN"
 echo "Created: $DMG_OUTPUT"
