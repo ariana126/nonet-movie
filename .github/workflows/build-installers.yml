@@ -103,15 +103,14 @@ jobs:
 
       - name: Install .deb and run health check
         run: |
-          shopt -s nullglob
-          deb_files=(verify-assets/deb/*.deb)
-          if [ ${#deb_files[@]} -eq 0 ]; then
+          deb_file="$(ls verify-assets/deb/*.deb 2>/dev/null | head -n 1 || true)"
+          if [ -z "$deb_file" ]; then
             echo "No .deb found for verification."
             exit 1
           fi
 
           apt-get update
-          apt-get install -y "${deb_files[0]}"
+          apt-get install -y "$deb_file"
 
           set +e
           health_output="$(nonet-movie --health 2>&1)"
@@ -124,7 +123,7 @@ jobs:
             exit 1
           fi
 
-          if [[ "$health_output" != *"OK"* ]]; then
+          if ! printf '%s' "$health_output" | grep -q "OK"; then
             echo "nonet-movie --health did not print OK"
             exit 1
           fi
