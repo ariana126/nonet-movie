@@ -54,12 +54,23 @@ echo "Building ${APP_NAME}.app ..."
 
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 VERSIONED_APP_BUNDLE="$DIST_DIR/$APP_NAME-$VERSION.app"
-ZIP_OUTPUT="$DIST_DIR/$APP_NAME-$VERSION-macos-app.zip"
+DMG_STAGING_DIR="$DIST_DIR/dmg-staging"
+DMG_OUTPUT="$DIST_DIR/$APP_NAME-$VERSION-macos.dmg"
 
 cp -R "$APP_BUNDLE" "$VERSIONED_APP_BUNDLE"
-rm -f "$ZIP_OUTPUT"
-ditto -c -k --sequesterRsrc --keepParent "$VERSIONED_APP_BUNDLE" "$ZIP_OUTPUT"
+rm -rf "$DMG_STAGING_DIR"
+mkdir -p "$DMG_STAGING_DIR"
+cp -R "$VERSIONED_APP_BUNDLE" "$DMG_STAGING_DIR/"
+ln -s /Applications "$DMG_STAGING_DIR/Applications"
+
+rm -f "$DMG_OUTPUT"
+hdiutil create \
+  -volname "${APP_NAME}-${VERSION}" \
+  -srcfolder "$DMG_STAGING_DIR" \
+  -ov \
+  -format UDZO \
+  "$DMG_OUTPUT"
 
 echo "Created: $APP_BUNDLE"
 echo "Created: $VERSIONED_APP_BUNDLE"
-echo "Created: $ZIP_OUTPUT"
+echo "Created: $DMG_OUTPUT"
