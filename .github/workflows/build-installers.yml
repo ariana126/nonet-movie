@@ -57,12 +57,9 @@ jobs:
             wait "$app_pid"
             exit_code=$?
             set -e
-            if [ "$exit_code" -ne 0 ]; then
-              echo "nonet-movie exited early with code $exit_code"
-              cat /tmp/nonet-movie-smoke.log
-              exit 1
-            fi
-            echo "nonet-movie exited during timeout window with code 0."
+            echo "nonet-movie exited before timeout with code $exit_code"
+            cat /tmp/nonet-movie-smoke.log
+            exit 1
           fi
 
       - name: Upload .deb artifact
@@ -118,12 +115,9 @@ jobs:
             wait "$app_pid"
             exit_code=$?
             set -e
-            if [ "$exit_code" -ne 0 ]; then
-              echo "nonet-movie exited early with code $exit_code"
-              cat /tmp/nonet-movie-smoke.log
-              exit 1
-            fi
-            echo "nonet-movie exited during timeout window with code 0."
+            echo "nonet-movie exited before timeout with code $exit_code"
+            cat /tmp/nonet-movie-smoke.log
+            exit 1
           fi
 
       - name: Upload .pkg artifact
@@ -165,10 +159,7 @@ jobs:
           $process.Refresh()
 
           if ($process.HasExited) {
-            if ($process.ExitCode -ne 0) {
-              throw "Installer exited early with code $($process.ExitCode)."
-            }
-            Write-Host "Installer exited during timeout window with code 0."
+            throw "Installer exited before timeout with code $($process.ExitCode)."
           } else {
             Write-Host "Installer is running; terminating process after timeout to continue pipeline."
             Stop-Process -Id $process.Id -Force
