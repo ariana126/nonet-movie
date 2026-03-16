@@ -6,7 +6,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
 BUILD_DIR="$PROJECT_ROOT/build/pyinstaller-macos"
 ENTRY_POINT="$PROJECT_ROOT/scripts/windows_main.py"
-PYTHON_BIN="${PYTHON_BIN:-/usr/bin/python3}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 if [ ! -x "$PYTHON_BIN" ]; then
   if command -v python3 >/dev/null 2>&1; then
@@ -31,7 +31,7 @@ else:
 PY
 )}"
 
-if ! command -v pyinstaller >/dev/null 2>&1; then
+if ! "$PYTHON_BIN" -m PyInstaller --version >/dev/null 2>&1; then
   "$PYTHON_BIN" -m pip install --upgrade pip
   "$PYTHON_BIN" -m pip install pyinstaller
 fi
@@ -43,7 +43,7 @@ mkdir -p "$DIST_DIR" "$BUILD_DIR"
 rm -rf "$DIST_DIR/$APP_NAME.app" "$DIST_DIR/$APP_NAME-$VERSION.app"
 
 echo "Building ${APP_NAME}.app ..."
-pyinstaller \
+"$PYTHON_BIN" -m PyInstaller \
   --noconfirm \
   --clean \
   --windowed \

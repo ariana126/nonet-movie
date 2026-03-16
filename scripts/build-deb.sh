@@ -11,7 +11,7 @@ PRIORITY="${PRIORITY:-optional}"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
 WORK_DIR="$DIST_DIR/deb-work"
-PYTHON_BIN="${PYTHON_BIN:-/usr/bin/python3}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 if ! command -v dpkg-deb >/dev/null 2>&1; then
   echo "dpkg-deb is required. Install with: sudo apt install dpkg-dev"
