@@ -16,7 +16,7 @@ class ShowStatisticsReportCommand(ConsoleCommand):
 
     @staticmethod
     def description() -> str:
-        return 'See statistics'
+        return 'See local database report'
 
     def execute(self) -> None:
         self.__presenter.start_timer()

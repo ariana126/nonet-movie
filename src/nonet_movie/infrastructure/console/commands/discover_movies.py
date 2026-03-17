@@ -14,7 +14,7 @@ class DiscoverMoviesCommand(ConsoleCommand):
 
     @staticmethod
     def description() -> str:
-        return 'Add new movies'
+        return 'Discover new movies from net'
 
     def execute(self) -> None:
         self.__presenter.start_timer()

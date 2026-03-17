@@ -15,7 +15,7 @@ class DiscoverSeriesCommand(ConsoleCommand):
 
     @staticmethod
     def description() -> str:
-        return 'Add new series'
+        return 'Discover new series from net'
 
     def execute(self) -> None:
         self.__presenter.start_timer()
