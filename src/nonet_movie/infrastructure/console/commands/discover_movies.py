@@ -35,16 +35,6 @@ class DiscoverMoviesCommand(ConsoleCommand):
         console.print(table, justify="center")
 
         table = Table(title='Summary')
-        table.add_column("Total discovered")
-        table.add_column("Successfully updated")
-        table.add_column("Missed")
-        table.add_row(str(report.total_movies_count), str(report.number_of_saved_movies), str(report.number_of_missed_movies))
+        table.add_column("Saved Movies")
+        table.add_row(str(report.count_of_saved_movies))
         console.print(table, justify="center")
-
-        if report.has_missed_movies:
-            table = Table(title='Missed Movies')
-            table.add_column("url", overflow="fold")
-            table.add_column("error", overflow="fold")
-            for missed_movie in report.missed_movies:
-                table.add_row(missed_movie.movie_url, str(missed_movie.error))
-            console.print(table, justify="center")

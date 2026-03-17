@@ -1,17 +1,11 @@
 from abc import ABC, abstractmethod
 
-from nonet_movie.domain.movie import Movie
-
-
-class MissedMovie:
-    def __init__(self, movie_url: str, error: Exception):
-        self.movie_url = movie_url
-        self.error = error
+from nonet_movie.application.discovery_queue import DiscoveryQueue
 
 
 class MovieSource(ABC):
     @abstractmethod
-    def find_movies(self) -> tuple[list[Movie], list[MissedMovie]]:
+    def find_movies(self, queue: DiscoveryQueue) -> None:
         pass
 
 
