@@ -8,7 +8,7 @@ class JsonDB:
     def __init__(self, db_path: str) -> None:
         self.__db_path = db_path
         self.__loaded_records: dict[str, JSON] = {}
-        self.__is_transaction_open = False
+        self.__transaction_stack_count: int = 0
 
     def flush(self) -> None:
         for collection_name, records in self.__loaded_records.items():
@@ -17,10 +17,10 @@ class JsonDB:
                 json.dump(records, file, indent=2, ensure_ascii=False)
 
     def open_transaction(self) -> None:
-        self.__is_transaction_open = True
+        self.__transaction_stack_count += 1
 
     def close_transaction(self) -> None:
-        self.__is_transaction_open = False
+        self.__transaction_stack_count -= 1
 
     def load(self, collection_name: str) -> dict:
         if collection_name in self.__loaded_records:
@@ -39,3 +39,7 @@ class JsonDB:
 
     def __collection_path(self, collection_name: str) -> str:
         return os.path.join(self.__db_path, f'{collection_name}.json')
+
+    @property
+    def __is_transaction_open(self) -> bool:
+        return not 0 == self.__transaction_stack_count
