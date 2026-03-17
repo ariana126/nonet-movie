@@ -10,6 +10,7 @@ from curl_cffi import requests, CurlOpt
 
 from nonet_movie.application.discovery_queue import DiscoveryQueue
 from nonet_movie.application.movie_source import MovieSource
+from nonet_movie.application.series_discovery_queue import SeriesDiscoveryQueue
 from nonet_movie.application.series_source import SeriesSource, MissedSeries
 from nonet_movie.domain import Movie, Link, FileSize
 from nonet_movie.domain.series import Series, Episode, SeasonNumber, Season, EpisodeNumber
@@ -23,9 +24,9 @@ class PageHasInvalidSeriesData(RuntimeError):
         super().__init__("Page has invalid series data")
 
 
-class EpisodePageHasNoData(RuntimeError):
+class CouldNotParseEpisodeNumber(RuntimeError):
     def __init__(self):
-        super().__init__("Episodes page has no data")
+        super().__init__("Could not parse episode number")
 
 
 class _TableParser(HTMLParser):
@@ -82,7 +83,7 @@ class AlmasMovieFileServerTableRow:
             matches = re.findall(pattern, self.name)
             if 0 < len(matches):
                 return f'E{matches[0][-2:]}'
-        raise RuntimeError('Could not parse episode number')
+        raise CouldNotParseEpisodeNumber()
 
 
 class AlmasMovieFileServerTable:
@@ -243,43 +244,38 @@ class AlmasMovieSource(MovieSource, SeriesSource):
                     movies_queue.signal_producer_stopped()
                     break
                 continue
-            try:
-                links: list[Link] = [
-                    Link(
-                        f'{page.url}/{row.name}',
-                        page.extract_movie_version_from_file_name(row.normalized_file_name),
-                        FileSize.from_string(row.size)
-                    )
-                    for row in page.table.file_rows
-                ]
-                movie = Movie(page.movie_title, int(page.movie_year), links)
-                movies_queue.put(movie)
-                logger.debug(f'Thread {current_thread().name} found movie: {movie.id}')
-            finally:
-                pages_queue.task_done()
+
+            links: list[Link] = [
+                Link(
+                    f'{page.url}/{row.name}',
+                    page.extract_movie_version_from_file_name(row.normalized_file_name),
+                    FileSize.from_string(row.size)
+                )
+                for row in page.table.file_rows
+            ]
+            movie = Movie(page.movie_title, int(page.movie_year), links)
+            movies_queue.put(movie)
+            logger.debug(f'Thread {current_thread().name} found movie: {movie.id}')
 
         logger.debug(f'Thread {current_thread().name} exiting')
 
-    def find_series(self) -> tuple[list[Series], list[MissedSeries]]:
+    def find_series(self, series_queue: SeriesDiscoveryQueue) -> None:
+        pages_queue = Queue()
+
         file_servers = [AlmasMovieFileServer(base_url[0], base_url[1]) for base_url in self.__series_file_servers_base_url]
+        for i, file_server in enumerate(file_servers):
+            thread_name: str = f'{current_thread().name}-FileServer-{i}'
+            Thread(target=self.__find_file_pages_from_file_server, args=(file_server, pages_queue), name=thread_name).start()
 
-        series: list[Series] = []
-        missed_series: list[MissedSeries] = []
-        for file_server in file_servers:
-            server_series, server_missed_series = self.__find_series_from_file_server(file_server)
-            series.extend(server_series)
-            missed_series.extend(server_missed_series)
-
-        return series, missed_series
-
-    def __find_series_from_file_server(self, file_server: AlmasMovieFileServer) -> tuple[list[Series], list[MissedSeries]]:
         series_map: dict[str, Series] = {}
-        missed_series: list[MissedSeries] = []
-
-        episodes_links_pages: list[AlmasMovieFileServerPage] = self.__find_file_pages_from_file_server(file_server, 4)
-        for page in episodes_links_pages:
-            if not page.table.has_file:
-                missed_series.append(MissedSeries(f'{file_server.base_url}{page.path}', EpisodePageHasNoData()))
+        finished_threads: int = 0
+        while True:
+            page: AlmasMovieFileServerPage | None = pages_queue.get()
+            if page is None:
+                finished_threads += 1
+                if len(file_servers) == finished_threads:
+                    series_queue.signal_producer_stopped()
+                    break
                 continue
 
             try:
@@ -291,26 +287,28 @@ class AlmasMovieSource(MovieSource, SeriesSource):
                 if not series.has_season_number(season_number):
                     series.add_new_season(season_number)
                 season: Season = series.get_season(season_number)
+
+                for row in page.table.file_rows:
+                    try:
+                        episode_number = EpisodeNumber.from_string(row.episode_number)
+                        if not season.has_episode_number(episode_number):
+                            season.add_new_episode(episode_number)
+                        episode: Episode = season.get_episode(episode_number)
+                        episode.add_link(Link(
+                            f'{page.url}/{row.name}',
+                            page.episodes_version,
+                            FileSize.from_string(row.size)
+                        ))
+
+                        series_queue.put(series)
+                    except Exception as error:
+                        logger.exception(error, extra={'url': f'{page.url}/{row.name}'})
+                        continue
             except Exception as error:
-                missed_series.append(MissedSeries(f'{file_server.base_url}{page.path}', error))
+                logger.exception(error, extra={'url': page.url})
                 continue
 
-            for row in page.table.file_rows:
-                try:
-                    episode_number = EpisodeNumber.from_string(row.episode_number)
-                    if not season.has_episode_number(episode_number):
-                        season.add_new_episode(episode_number)
-                    episode: Episode = season.get_episode(episode_number)
-                    episode.add_link(Link(
-                        f'{file_server.base_url}{page.path}/{row.name}',
-                        page.episodes_version,
-                        FileSize.from_string(row.size)
-                    ))
-                except Exception as error:
-                    missed_series.append(MissedSeries(f'{file_server.base_url}{page.path}/{row.name}', error))
-                    continue
-
-        return list(series_map.values()), missed_series
+        logger.debug(f'Thread {current_thread().name} exiting')
 
     @staticmethod
     def __find_file_pages_from_file_server(file_server: AlmasMovieFileServer, pages_queue: Queue) -> None:

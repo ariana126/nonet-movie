@@ -54,8 +54,6 @@ class DiscoverNewMoviesUseCase(ServiceClass):
                 except Exception as e:
                     logger.error(f'Failed to save movie: {movie.id}', extra={'error': e})
                     continue
-                finally:
-                    self.__queue.task_done()
             repository.flush()
 
         return DiscoveryReport(movies)

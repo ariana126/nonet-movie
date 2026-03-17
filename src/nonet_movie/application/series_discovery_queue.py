@@ -1,12 +1,12 @@
 from queue import Queue, Empty
 
-from nonet_movie.domain import Movie
+from nonet_movie.domain import Series
 
 
 Producer_Stopped = object()
 
 
-class DiscoveryQueue:
+class SeriesDiscoveryQueue:
     def __init__(self):
         self.__queue = Queue()
         self.__producers_count: int = 0
@@ -18,7 +18,7 @@ class DiscoveryQueue:
     def signal_producer_stopped(self) -> None:
         self.__queue.put(Producer_Stopped)
 
-    def get(self) -> Movie:
+    def get(self) -> Series:
         message = self.__queue.get()
         if message is Producer_Stopped:
             self.__stopped_producers_count += 1
@@ -27,5 +27,5 @@ class DiscoveryQueue:
             return self.get()
         return message
 
-    def put(self, movie: Movie) -> None:
-        self.__queue.put(movie)
+    def put(self, series: Series) -> None:
+        self.__queue.put(series)

@@ -36,18 +36,8 @@ class DiscoverSeriesCommand(ConsoleCommand):
         console.print(table, justify="center")
 
         table = Table(title='Summary')
-        table.add_column("Total series")
-        table.add_column("Total seasons")
-        table.add_column("Total episodes")
-        table.add_column("Total links")
-        table.add_column("Total errors")
-        table.add_row(str(report.number_of_saved_series), str(report.number_of_saved_seasons), str(report.number_of_saved_episodes), str(report.number_of_saved_links), str(report.number_of_missed))
+        table.add_column("Saved Series")
+        table.add_column("Saved Seasons")
+        table.add_column("Saved Episodes")
+        table.add_row(str(report.number_of_saved_series), str(report.number_of_saved_seasons), str(report.number_of_saved_episodes))
         console.print(table, justify="center")
-
-        if report.has_missed:
-            table = Table(title='Errors')
-            table.add_column("url", overflow="fold")
-            table.add_column("message", overflow="fold")
-            for missed in report.missed_series:
-                table.add_row(missed.series_url, str(missed.error))
-            console.print(table, justify="center")

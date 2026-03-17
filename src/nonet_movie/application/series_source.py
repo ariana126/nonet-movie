@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
-from nonet_movie.domain.series import Series
+from nonet_movie.application.series_discovery_queue import SeriesDiscoveryQueue
+
 
 class MissedSeries:
     def __init__(self, series_url: str, error: Exception):
@@ -10,7 +11,7 @@ class MissedSeries:
 
 class SeriesSource(ABC):
     @abstractmethod
-    def find_series(self) -> tuple[list[Series], list[MissedSeries]]:
+    def find_series(self, queue: SeriesDiscoveryQueue) -> None:
         pass
 
 
