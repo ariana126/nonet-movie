@@ -3,11 +3,15 @@ from abc import ABC, abstractmethod
 
 class TransactionalRepository(ABC):
     @abstractmethod
-    def commit(self) -> None:
+    def flush(self) -> None:
         pass
 
     @abstractmethod
     def open_transaction(self) -> None:
+        pass
+
+    @abstractmethod
+    def commit(self) -> None:
         pass
 
     def __enter__(self):

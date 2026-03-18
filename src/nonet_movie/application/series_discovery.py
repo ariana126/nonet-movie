@@ -60,8 +60,7 @@ class DiscoverNewSeriesUseCase:
                 logger.info(f'Saved series: {series.id}')
                 current_chunk += 1
                 if chunk_size <= current_chunk:
-                    repository.commit()
-                    repository.open_transaction()
+                    repository.flush()
                     current_chunk = 0
 
         return SeriesDiscoveryReport([])

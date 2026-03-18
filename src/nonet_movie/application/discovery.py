@@ -49,8 +49,7 @@ class DiscoverNewMoviesUseCase(ServiceClass):
                     movies.append(movie)
                     current_chunk += 1
                     if chunk_size <= current_chunk:
-                        repository.commit()
-                        repository.open_transaction()
+                        repository.flush()
                         current_chunk = 0
                 except Exception as e:
                     logger.error(f'Failed to save movie: {movie.id}', extra={'error': e})

@@ -14,6 +14,9 @@ class JsonDBSeriesRepository(SeriesRepository):
     def __init__(self, json_db: JsonDB):
         self.db = json_db
 
+    def flush(self) -> None:
+        self.db.flush()
+
     def commit(self) -> None:
         self.db.commit()
 
