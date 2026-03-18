@@ -85,10 +85,8 @@ class TerminalPresenter:
     def get_user_input(self, message: str) -> str:
         return text(qmark='', message=message, style=self.style).ask()
 
-    def confirm_with_user(self, message: str, default=True) -> str:
-        confirmation: bool = confirm(qmark='', message=message, default=default, style=self.style).ask()
-        if not confirmation:
-            self.__present_previous_page()
+    def confirm_with_user(self, message: str, default=True) -> bool:
+        return confirm(qmark='', message=message, default=default, style=self.style).ask()
 
     def present_links(self, links: list[Link]) -> None:
         table = Table()

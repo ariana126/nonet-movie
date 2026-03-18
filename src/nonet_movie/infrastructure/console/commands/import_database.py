@@ -13,7 +13,9 @@ class ImportDatabaseCommand(ConsoleCommand):
         return 'Import database'
 
     def execute(self) -> None:
-        self.__presenter.confirm_with_user('Current database will be deleted. Do you want to continue?', default=False)
+        confirm: bool = self.__presenter.confirm_with_user('Current database will be deleted. Do you want to continue?', default=False)
+        if not confirm:
+            return
         file_path: str = self.__presenter.get_user_input('Copy the exported file path:')
 
         try:
