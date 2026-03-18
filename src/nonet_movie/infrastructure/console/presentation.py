@@ -4,7 +4,7 @@ import time
 from datetime import timedelta
 
 from prompt_toolkit.styles import Style
-from questionary import select, Choice, Separator, text
+from questionary import select, Choice, Separator, text, confirm
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -84,6 +84,11 @@ class TerminalPresenter:
 
     def get_user_input(self, message: str) -> str:
         return text(qmark='', message=message, style=self.style).ask()
+
+    def confirm_with_user(self, message: str, default=True) -> str:
+        confirmation: bool = confirm(qmark='', message=message, default=default, style=self.style).ask()
+        if not confirmation:
+            self.__present_previous_page()
 
     def present_links(self, links: list[Link]) -> None:
         table = Table()
@@ -199,10 +204,10 @@ class TerminalPresenter:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.stop_timer()
         self.__clear_screen()
 
     def __clear_screen(self) -> None:
+        self.stop_timer()
         if not self.__is_running_on_windows():
             self.console.print("\033c", end="")
         else:
