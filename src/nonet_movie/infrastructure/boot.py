@@ -11,6 +11,7 @@ from .movie_source.factory import MovieSourcesFactoryImpl, SeriesSourcesFactoryI
 from .persistence.json_db import JsonDB
 from .persistence.json_db_movie_repository import JsonDBMovieRepository
 from .persistence.json_db_series_repository import JsonDBSeriesRepository
+from ..application.import_database import ImportDatabaseUseCase
 from ..application.movie_source import MovieSourcesFactory
 from ..application.series_source import SeriesSourcesFactory
 from ..domain.service.movie_repositoy import MovieRepository
@@ -26,6 +27,7 @@ def boot() -> None:
     service_container.set_parameters(parameters)
 
     service_container.bind_parameters(JsonDB, {'db_path': 'JSON_DB_PATH'})
+    service_container.bind_parameters(ImportDatabaseUseCase, {'db_path': 'JSON_DB_PATH'})
 
     service_container.bind(MovieRepository, JsonDBMovieRepository)
     service_container.bind(SeriesRepository, JsonDBSeriesRepository)
