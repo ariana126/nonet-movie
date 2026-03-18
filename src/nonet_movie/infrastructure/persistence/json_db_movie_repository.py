@@ -11,14 +11,11 @@ class JsonDBMovieRepository(MovieRepository):
     def __init__(self, json_db: JsonDB):
         self.db = json_db
 
-    def flush(self) -> None:
-        self.db.flush()
+    def commit(self) -> None:
+        self.db.commit()
 
     def open_transaction(self) -> None:
         self.db.open_transaction()
-
-    def close_transaction(self) -> None:
-        self.db.close_transaction()
 
     def search_in_title(self, title: str) -> list[Movie]:
         records = self.db.load(self.__COLLECTION_NAME)

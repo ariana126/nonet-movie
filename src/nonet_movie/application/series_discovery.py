@@ -41,15 +41,13 @@ class DiscoverNewSeriesUseCase:
         self.__series_sources_factory = series_sources_factory
 
     def execute(self) -> SeriesDiscoveryReport:
-        saved_series: list[Series] = []
-
         queue = SeriesDiscoveryQueue()
         for i, source in enumerate(self.__series_sources_factory.get_sources()):
             thread_name: str = f'SeriesSource-{i}'
-            Thread(target=source.find_series, args=(queue,), name=thread_name).start()
+            Thread(target=source.find_series, args=(queue,), name=thread_name, daemon=True).start()
             queue.signal_producers_bind()
 
-        chunk_size: int = 500
+        chunk_size: int = 1000
         current_chunk: int = 0
         with self.__series_repository as repository:
             while True:
@@ -58,22 +56,12 @@ class DiscoverNewSeriesUseCase:
                 except Empty:
                     break
 
-                self.__save_series(series)
+                repository.save(series)
                 logger.info(f'Saved series: {series.id}')
-                saved_series.append(series)
                 current_chunk += 1
                 if chunk_size <= current_chunk:
-                    repository.flush()
+                    repository.commit()
+                    repository.open_transaction()
                     current_chunk = 0
 
-            repository.flush()
-
-        return SeriesDiscoveryReport(saved_series)
-
-    def __save_series(self, series: Series) -> None:
-        existing_series: Series = self.__series_repository.find(series.id)
-        if not existing_series is None:
-            existing_series.sync_seasons(series.seasons)
-            series = existing_series
-
-        self.__series_repository.save(series)
+        return SeriesDiscoveryReport([])

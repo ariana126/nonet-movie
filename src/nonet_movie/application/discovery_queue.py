@@ -1,7 +1,9 @@
+import logging
 from queue import Queue, Empty
 
 from nonet_movie.domain import Movie
 
+logger = logging.getLogger('DiscoveryQueue')
 
 Producer_Stopped = object()
 
@@ -19,6 +21,7 @@ class DiscoveryQueue:
         self.__queue.put(Producer_Stopped)
 
     def get(self) -> Movie:
+        logger.debug(f'Queue size: {self.__queue.qsize()}')
         message = self.__queue.get()
         if message is Producer_Stopped:
             self.__stopped_producers_count += 1

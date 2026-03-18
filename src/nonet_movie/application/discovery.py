@@ -1,5 +1,5 @@
 import logging
-from queue import Empty, Queue
+from queue import Empty
 from threading import Thread
 
 from nonet_movie.application.discovery_queue import DiscoveryQueue
@@ -32,7 +32,7 @@ class DiscoverNewMoviesUseCase(ServiceClass):
 
         movie_sources: list[MovieSource] = self.__movie_sources_factory.get_sources()
         for i, source in enumerate(movie_sources):
-            Thread(target=source.find_movies, args=(self.__queue,), name=f'MovieSource-{i}').start()
+            Thread(target=source.find_movies, args=(self.__queue,), name=f'MovieSource-{i}', daemon=True).start()
             self.__queue.signal_producers_bind()
 
         chunk_size: int = 100
@@ -49,12 +49,12 @@ class DiscoverNewMoviesUseCase(ServiceClass):
                     movies.append(movie)
                     current_chunk += 1
                     if chunk_size <= current_chunk:
-                        repository.flush()
+                        repository.commit()
+                        repository.open_transaction()
                         current_chunk = 0
                 except Exception as e:
                     logger.error(f'Failed to save movie: {movie.id}', extra={'error': e})
                     continue
-            repository.flush()
 
         return DiscoveryReport(movies)
 

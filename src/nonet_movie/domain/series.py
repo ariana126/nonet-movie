@@ -80,6 +80,10 @@ class Episode(Entity):
                 return
         self.__links.append(link)
 
+    def add_links(self, links: list[Link]) -> None:
+        for link in links:
+            self.add_link(link)
+
     def __repr__(self):
         return f'Episode({self.__season_id}, {self.__number}, {self.__links})'
 
@@ -103,37 +107,11 @@ class Season(Entity):
     def episodes(self) -> list[Episode]:
         return self.__episodes
 
-    def has_episode_number(self, episode_number: EpisodeNumber) -> bool:
+    def add_episode_link(self, episode_number: EpisodeNumber, link: Link) -> None:
         for episode in self.__episodes:
             if episode_number.equals(episode.number):
-                return True
-        return False
-
-    def add_new_episode(self, episode_number: EpisodeNumber) -> None:
-        if self.has_episode_number(episode_number):
-            raise ValueError(f"Episode number {episode_number} already exists")
-        self.__episodes.append(Episode(self.id, episode_number, []))
-
-    def get_episode(self, episode_number: EpisodeNumber) -> Episode:
-        for episode in self.__episodes:
-            if episode_number.equals(episode.number):
-                return episode
-        raise ValueError(f"Episode number {episode_number} does not exist")
-
-    def sync_episodes(self, episodes: list[Episode]) -> None:
-        for episode in episodes:
-            if not self.__has_episode(episode):
-                self.__episodes.append(episode)
-                continue
-            existing_episode: Episode = self.get_episode(episode.number)
-            for link in episode.links:
-                existing_episode.add_link(link)
-
-    def __has_episode(self, episode: Episode) -> bool:
-        for existing_episode in self.__episodes:
-            if episode.equals(existing_episode):
-                return True
-        return False
+                episode.add_link(link)
+        self.__episodes.append(Episode(self._id, episode_number, [link]))
 
     def __repr__(self):
         return f'Season({self.__series_id}, {self.__number}, {self.__episodes})'
@@ -152,36 +130,14 @@ class Series(AggregateRoot):
     def seasons(self) -> list[Season]:
         return self.__seasons
 
-    def has_season_number(self, season_number: SeasonNumber) -> bool:
+    def add_episode_link(self, season_number: SeasonNumber, episode_number: EpisodeNumber, link: Link) -> None:
         for season in self.__seasons:
             if season_number.equals(season.number):
-                return True
-        return False
-
-    def add_new_season(self, number: SeasonNumber) -> None:
-        if self.has_season_number(number):
-            raise ValueError(f'Season number {number} already exists')
-        self.__seasons.append(Season(self.id, number, []))
-
-    def get_season(self, number: SeasonNumber) -> Season:
-        for season in self.__seasons:
-            if number.equals(season.number):
-                return season
-        raise ValueError(f'Season number {number} does not exist')
-
-    def sync_seasons(self, seasons: list[Season]) -> None:
-        for season in seasons:
-            if not self.__has_season(season):
-                self.__seasons.append(season)
-                continue
-            existing_season: Season = self.get_season(season.number)
-            existing_season.sync_episodes(season.episodes)
-
-    def __has_season(self, season: Season) -> bool:
-        for existing_seasons in self.__seasons:
-            if season.equals(existing_seasons):
-                return True
-        return False
+                season.add_episode_link(episode_number, link)
+                return
+        season = Season(self._id, season_number, [])
+        season.add_episode_link(episode_number, link)
+        self.__seasons.append(season)
 
     def __repr__(self):
         return f'Series(title: {self.title}, seasons: {self.__seasons})'

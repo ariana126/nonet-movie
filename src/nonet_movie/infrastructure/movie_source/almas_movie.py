@@ -267,7 +267,6 @@ class AlmasMovieSource(MovieSource, SeriesSource):
             thread_name: str = f'{current_thread().name}-FileServer-{i}'
             Thread(target=self.__find_file_pages_from_file_server, args=(file_server, pages_queue), name=thread_name).start()
 
-        series_map: dict[str, Series] = {}
         finished_threads: int = 0
         while True:
             page: AlmasMovieFileServerPage | None = pages_queue.get()
@@ -279,31 +278,22 @@ class AlmasMovieSource(MovieSource, SeriesSource):
                 continue
 
             try:
-                if not page.series_title in series_map:
-                    series_map[page.series_title] = Series(page.series_title, [])
-                series: Series = series_map[page.series_title]
-
-                season_number = SeasonNumber.from_string(page.season_number)
-                if not series.has_season_number(season_number):
-                    series.add_new_season(season_number)
-                season: Season = series.get_season(season_number)
-
+                series = Series(page.series_title, [])
                 for row in page.table.file_rows:
                     try:
-                        episode_number = EpisodeNumber.from_string(row.episode_number)
-                        if not season.has_episode_number(episode_number):
-                            season.add_new_episode(episode_number)
-                        episode: Episode = season.get_episode(episode_number)
-                        episode.add_link(Link(
-                            f'{page.url}/{row.name}',
-                            page.episodes_version,
-                            FileSize.from_string(row.size)
-                        ))
-
-                        series_queue.put(series)
+                        series.add_episode_link(
+                            SeasonNumber.from_string(page.season_number),
+                            EpisodeNumber.from_string(row.episode_number),
+                            Link(
+                                f'{page.url}/{row.name}',
+                                page.episodes_version,
+                                FileSize.from_string(row.size)
+                            )
+                        )
                     except Exception as error:
                         logger.exception(error, extra={'url': f'{page.url}/{row.name}'})
                         continue
+                series_queue.put(series)
             except Exception as error:
                 logger.exception(error, extra={'url': page.url})
                 continue
