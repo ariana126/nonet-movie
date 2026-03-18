@@ -199,10 +199,10 @@ class TerminalPresenter:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.stop_timer()
         self.__clear_screen()
 
     def __clear_screen(self) -> None:
+        self.stop_timer()
         if not self.__is_running_on_windows():
             self.console.print("\033c", end="")
         else:
