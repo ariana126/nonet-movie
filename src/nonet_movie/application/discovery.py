@@ -44,7 +44,7 @@ class DiscoverNewMoviesUseCase(ServiceClass):
                 except Empty:
                     break
                 try:
-                    self.__save_movie(movie)
+                    repository.save(movie)
                     logger.info(f'Saved movie: {movie.id}')
                     movies.append(movie)
                     current_chunk += 1
@@ -57,11 +57,3 @@ class DiscoverNewMoviesUseCase(ServiceClass):
                     continue
 
         return DiscoveryReport(movies)
-
-    def __save_movie(self, movie: Movie) -> None:
-        existing_movie: Movie = self.__movie_repository.find(movie.id)
-        if not existing_movie is None:
-            for link in movie.links:
-                existing_movie.add_link(link)
-            movie = existing_movie
-        self.__movie_repository.save(movie)

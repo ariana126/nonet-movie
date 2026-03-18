@@ -33,7 +33,12 @@ class JsonDBMovieRepository(MovieRepository):
 
     def save(self, movie: Movie) -> None:
         records = self.db.load(self.__COLLECTION_NAME)
-        records[movie.id.as_string] = self.__serialize(movie)
+        if not movie.id.as_string in records:
+            records[movie.id.as_string] = self.__serialize(movie)
+        else:
+            persisted_movie: Movie = self.__deserialize(records[movie.id.as_string])
+            persisted_movie.add_links(movie.links)
+            records[movie.id.as_string] = self.__serialize(persisted_movie)
         self.db.persist(records, self.__COLLECTION_NAME)
 
     @staticmethod
