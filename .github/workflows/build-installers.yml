@@ -73,6 +73,11 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Install ImageMagick
+        shell: pwsh
+        run: |
+          choco install imagemagick -y
+
       - name: Build .exe
         shell: pwsh
         run: |

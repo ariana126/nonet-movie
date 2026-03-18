@@ -86,6 +86,8 @@ Build scripts are included:
 - macOS package: `scripts/build-macos-pkg.sh`
 - Windows executable: `scripts/build-windows-exe.ps1`
 
+Windows packaging expects ImageMagick (`magick`) to be installed so the shared icon (`assets/nonet-movie.svg`) can be converted to a Windows `.ico` during build.
+
 A GitHub Actions workflow (`.github/workflows/build-installers.yml`) builds installers on tag pushes (`v*`) and publishes a release.
 
 ## Development Notes
