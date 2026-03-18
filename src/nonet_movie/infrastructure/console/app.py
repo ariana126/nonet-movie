@@ -8,9 +8,10 @@ from underpy import Fn
 from nonet_movie.infrastructure.console.command import ConsoleCommand
 from nonet_movie.infrastructure.console.commands.discover_movies import DiscoverMoviesCommand
 from nonet_movie.infrastructure.console.commands.discover_series import DiscoverSeriesCommand
+from nonet_movie.infrastructure.console.commands.import_database import ImportDatabaseCommand
 from nonet_movie.infrastructure.console.commands.search_movies import SearchMoviesCommand
 from nonet_movie.infrastructure.console.commands.search_series import SearchSeriesCommand
-from nonet_movie.infrastructure.console.commands.statistics_report import ShowStatisticsReportCommand
+from nonet_movie.infrastructure.console.commands.database_report import ShowStatisticsReportCommand
 from nonet_movie.infrastructure.console.presentation import TerminalPresenter, TerminalMenuItem, TerminalPage
 
 
@@ -23,6 +24,7 @@ class ConsoleApplication:
             DiscoverMoviesCommand,
             DiscoverSeriesCommand,
             ShowStatisticsReportCommand,
+            ImportDatabaseCommand,
         ]
 
     def run(self) -> None:

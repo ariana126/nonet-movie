@@ -4,7 +4,7 @@ import time
 from datetime import timedelta
 
 from prompt_toolkit.styles import Style
-from questionary import select, Choice, Separator, text
+from questionary import select, Choice, Separator, text, confirm
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -84,6 +84,11 @@ class TerminalPresenter:
 
     def get_user_input(self, message: str) -> str:
         return text(qmark='', message=message, style=self.style).ask()
+
+    def confirm_with_user(self, message: str, default=True) -> str:
+        confirmation: bool = confirm(qmark='', message=message, default=default, style=self.style).ask()
+        if not confirmation:
+            self.__present_previous_page()
 
     def present_links(self, links: list[Link]) -> None:
         table = Table()
