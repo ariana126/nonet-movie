@@ -11,7 +11,7 @@ class TransactionalRepository(ABC):
         pass
 
     @abstractmethod
-    def close_transaction(self) -> None:
+    def commit(self) -> None:
         pass
 
     def __enter__(self):
@@ -19,4 +19,4 @@ class TransactionalRepository(ABC):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close_transaction()
+        self.commit()

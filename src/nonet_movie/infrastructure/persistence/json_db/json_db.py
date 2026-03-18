@@ -1,26 +1,35 @@
 import json
+import logging
 import os
 
 from underpy import JSON
+
+
+logger = logging.getLogger('JsonDB')
 
 
 class JsonDB:
     def __init__(self, db_path: str) -> None:
         self.__db_path = db_path
         self.__loaded_records: dict[str, JSON] = {}
-        self.__is_transaction_open = False
+        self.__transaction_stack_count: int = 0
 
     def flush(self) -> None:
+        logger.debug('Flushing')
         for collection_name, records in self.__loaded_records.items():
             os.makedirs(os.path.dirname(self.__collection_path(collection_name)), exist_ok=True)
             with open(self.__collection_path(collection_name), "w", encoding="utf-8") as file:
                 json.dump(records, file, indent=2, ensure_ascii=False)
 
     def open_transaction(self) -> None:
-        self.__is_transaction_open = True
+        logger.debug('Opening transaction')
+        self.__transaction_stack_count += 1
 
-    def close_transaction(self) -> None:
-        self.__is_transaction_open = False
+    def commit(self) -> None:
+        logger.debug('Closing transaction')
+        self.__transaction_stack_count -= 1
+        if not self.__is_transaction_open:
+            self.flush()
 
     def load(self, collection_name: str) -> dict:
         if collection_name in self.__loaded_records:
@@ -33,9 +42,14 @@ class JsonDB:
             return records
 
     def persist(self, records: dict, collection_name: str) -> None:
+        logger.debug(f'Persisting collection {collection_name}')
         self.__loaded_records[collection_name] = records
         if not self.__is_transaction_open:
             self.flush()
 
     def __collection_path(self, collection_name: str) -> str:
         return os.path.join(self.__db_path, f'{collection_name}.json')
+
+    @property
+    def __is_transaction_open(self) -> bool:
+        return not 0 == self.__transaction_stack_count

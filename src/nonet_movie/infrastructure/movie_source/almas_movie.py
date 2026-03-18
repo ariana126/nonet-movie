@@ -1,26 +1,22 @@
 import logging
 import re
-import threading
 from html.parser import HTMLParser
 from queue import Queue, Empty
-from threading import Thread, Lock
+from threading import Thread, current_thread
 from typing import Any
 from urllib.parse import urlparse
 
 from curl_cffi import requests, CurlOpt
 
-from nonet_movie.application.movie_source import MovieSource, MissedMovie
+from nonet_movie.application.discovery_queue import DiscoveryQueue
+from nonet_movie.application.movie_source import MovieSource
+from nonet_movie.application.series_discovery_queue import SeriesDiscoveryQueue
 from nonet_movie.application.series_source import SeriesSource, MissedSeries
 from nonet_movie.domain import Movie, Link, FileSize
 from nonet_movie.domain.series import Series, Episode, SeasonNumber, Season, EpisodeNumber
 
 
-logger = logging.getLogger(__name__)
-
-
-class MoviePageHasNoData(RuntimeError):
-    def __init__(self):
-        super().__init__("Movie page has no data")
+logger = logging.getLogger('AlmasMovieSource')
 
 
 class PageHasInvalidSeriesData(RuntimeError):
@@ -28,9 +24,9 @@ class PageHasInvalidSeriesData(RuntimeError):
         super().__init__("Page has invalid series data")
 
 
-class EpisodePageHasNoData(RuntimeError):
+class CouldNotParseEpisodeNumber(RuntimeError):
     def __init__(self):
-        super().__init__("Episodes page has no data")
+        super().__init__("Could not parse episode number")
 
 
 class _TableParser(HTMLParser):
@@ -87,7 +83,7 @@ class AlmasMovieFileServerTableRow:
             matches = re.findall(pattern, self.name)
             if 0 < len(matches):
                 return f'E{matches[0][-2:]}'
-        raise RuntimeError('Could not parse episode number')
+        raise CouldNotParseEpisodeNumber()
 
 
 class AlmasMovieFileServerTable:
@@ -124,9 +120,14 @@ class AlmasMovieFileServerTable:
 
 
 class AlmasMovieFileServerPage:
-    def __init__(self, path: str, table: AlmasMovieFileServerTable):
+    def __init__(self, base_url: str, path: str, table: AlmasMovieFileServerTable):
+        self.base_url = base_url
         self.path = path
         self.table = table
+
+    @property
+    def url(self) -> str:
+        return f'{self.base_url}{self.path}'
 
     @property
     def normalized_path_name(self) -> str:
@@ -201,8 +202,6 @@ class AlmasMovieFileServer:
             options[CurlOpt.RESOLVE] = [f"{self.__host}:{self.__ip}"]
         response = requests.get(url, curl_options=options)
 
-        logger.info(f'Fetched {response.url} successfully', extra={'ip': self.__ip})
-
         parser = _TableParser()
         parser.feed(response.text)
 
@@ -228,133 +227,117 @@ class AlmasMovieSource(MovieSource, SeriesSource):
             ('https://nairobi.ggusers.com/Series', '185.137.25.102'),
         ]
 
-    def find_movies(self) -> tuple[list[Movie], list[MissedMovie]]:
+    def find_movies(self, movies_queue: DiscoveryQueue) -> None:
+        pages_queue = Queue()
+
         file_servers = [AlmasMovieFileServer(base_url[0], base_url[1]) for base_url in self.__movie_file_servers_base_url]
+        for i, file_server in enumerate(file_servers):
+            thread_name: str = f'{current_thread().name}-FileServer-{i}'
+            Thread(target=self.__find_file_pages_from_file_server, args=(file_server, pages_queue), name=thread_name).start()
 
-        movies: list[Movie] = []
-        missed_movies: list[MissedMovie] = []
-        for file_server in file_servers:
-            server_movies, server_missed_movies = self.__find_movies_from_file_server(file_server)
-            movies.extend(server_movies)
-            missed_movies.extend(server_missed_movies)
-
-        return movies, missed_movies
-
-    def find_series(self) -> tuple[list[Series], list[MissedSeries]]:
-        file_servers = [AlmasMovieFileServer(base_url[0], base_url[1]) for base_url in self.__series_file_servers_base_url]
-
-        series: list[Series] = []
-        missed_series: list[MissedSeries] = []
-        for file_server in file_servers:
-            server_series, server_missed_series = self.__find_series_from_file_server(file_server)
-            series.extend(server_series)
-            missed_series.extend(server_missed_series)
-
-        return series, missed_series
-
-    def __find_movies_from_file_server(self, file_server: AlmasMovieFileServer) -> tuple[list[Movie], list[MissedMovie]]:
-        movies: list[Movie] = []
-        missed_movies: list[MissedMovie] = []
-
-        movie_pages: list[AlmasMovieFileServerPage] = self.__get_pages_of_depth(file_server, 2)
-        for page in movie_pages:
-            if not page.table.has_file:
-                missed_movies.append(MissedMovie(f'{file_server.base_url}{page.path}', MoviePageHasNoData()))
+        finished_threads: int = 0
+        while True:
+            page: AlmasMovieFileServerPage | None = pages_queue.get()
+            if page is None:
+                finished_threads += 1
+                if len(file_servers) == finished_threads:
+                    movies_queue.signal_producer_stopped()
+                    break
                 continue
+
             links: list[Link] = [
                 Link(
-                    f'{file_server.base_url}{page.path}/{row.name}',
+                    f'{page.url}/{row.name}',
                     page.extract_movie_version_from_file_name(row.normalized_file_name),
                     FileSize.from_string(row.size)
                 )
                 for row in page.table.file_rows
             ]
-            movies.append(Movie(page.movie_title, int(page.movie_year), links))
+            movie = Movie(page.movie_title, int(page.movie_year), links)
+            movies_queue.put(movie)
+            logger.debug(f'Thread {current_thread().name} found movie: {movie.id}')
 
-        return movies, missed_movies
+        logger.debug(f'Thread {current_thread().name} exiting')
 
-    def __find_series_from_file_server(self, file_server: AlmasMovieFileServer) -> tuple[list[Series], list[MissedSeries]]:
-        series_map: dict[str, Series] = {}
-        missed_series: list[MissedSeries] = []
+    def find_series(self, series_queue: SeriesDiscoveryQueue) -> None:
+        pages_queue = Queue()
 
-        episodes_links_pages: list[AlmasMovieFileServerPage] = self.__get_pages_of_depth(file_server, 4)
-        for page in episodes_links_pages:
-            if not page.table.has_file:
-                missed_series.append(MissedSeries(f'{file_server.base_url}{page.path}', EpisodePageHasNoData()))
+        file_servers = [AlmasMovieFileServer(base_url[0], base_url[1]) for base_url in self.__series_file_servers_base_url]
+        for i, file_server in enumerate(file_servers):
+            thread_name: str = f'{current_thread().name}-FileServer-{i}'
+            Thread(target=self.__find_file_pages_from_file_server, args=(file_server, pages_queue), name=thread_name).start()
+
+        finished_threads: int = 0
+        while True:
+            page: AlmasMovieFileServerPage | None = pages_queue.get()
+            if page is None:
+                finished_threads += 1
+                if len(file_servers) == finished_threads:
+                    series_queue.signal_producer_stopped()
+                    break
                 continue
 
             try:
-                if not page.series_title in series_map:
-                    series_map[page.series_title] = Series(page.series_title, [])
-                series: Series = series_map[page.series_title]
-
-                season_number = SeasonNumber.from_string(page.season_number)
-                if not series.has_season_number(season_number):
-                    series.add_new_season(season_number)
-                season: Season = series.get_season(season_number)
+                series = Series(page.series_title, [])
+                for row in page.table.file_rows:
+                    try:
+                        series.add_episode_link(
+                            SeasonNumber.from_string(page.season_number),
+                            EpisodeNumber.from_string(row.episode_number),
+                            Link(
+                                f'{page.url}/{row.name}',
+                                page.episodes_version,
+                                FileSize.from_string(row.size)
+                            )
+                        )
+                    except Exception as error:
+                        logger.exception(error, extra={'url': f'{page.url}/{row.name}'})
+                        continue
+                series_queue.put(series)
             except Exception as error:
-                missed_series.append(MissedSeries(f'{file_server.base_url}{page.path}', error))
+                logger.exception(error, extra={'url': page.url})
                 continue
 
-            for row in page.table.file_rows:
-                try:
-                    episode_number = EpisodeNumber.from_string(row.episode_number)
-                    if not season.has_episode_number(episode_number):
-                        season.add_new_episode(episode_number)
-                    episode: Episode = season.get_episode(episode_number)
-                    episode.add_link(Link(
-                        f'{file_server.base_url}{page.path}/{row.name}',
-                        page.episodes_version,
-                        FileSize.from_string(row.size)
-                    ))
-                except Exception as error:
-                    missed_series.append(MissedSeries(f'{file_server.base_url}{page.path}/{row.name}', error))
-                    continue
-
-        return list(series_map.values()), missed_series
+        logger.debug(f'Thread {current_thread().name} exiting')
 
     @staticmethod
-    def __get_pages_of_depth(file_server: AlmasMovieFileServer, depth: int, current_path: str = '') -> list[AlmasMovieFileServerPage]:
-        pages: list[AlmasMovieFileServerPage] = []
-
-        lock = Lock()
+    def __find_file_pages_from_file_server(file_server: AlmasMovieFileServer, pages_queue: Queue) -> None:
         queue = Queue()
+
         def worker() -> None:
             while True:
-                thread_name: str = threading.current_thread().name
                 try:
-                    max_depth, path = queue.get(timeout=0.5)
+                    path: str = queue.get(timeout=1)
                 except Empty:
-                    return
+                    break
                 try:
-                    logger.info(f'{thread_name} processing path {path}')
+                    logger.debug(f'Thread {current_thread().name} processing url {file_server.base_url}{path}')
                     table: AlmasMovieFileServerTable = file_server.get_table_of_page(path)
-                    if 0 == max_depth:
-                        with lock:
-                            pages.append(AlmasMovieFileServerPage(path, table))
-                    else:
-                        if table.has_file:
-                            with lock:
-                                pages.append(AlmasMovieFileServerPage(path, table))
-                        for folder in table.folder_rows:
-                            queue.put((max_depth - 1, f"{path}/{folder.name}"))
+                    if table.has_file:
+                        pages_queue.put(AlmasMovieFileServerPage(file_server.base_url, path, table))
+                    for folder in table.folder_rows:
+                        queue.put(f"{path}/{folder.name}")
                 except Exception as e:
-                    logger.error(f'{thread_name} encounters an error.', extra={'error': e, 'path': path})
+                    logger.error(f'Thread {current_thread().name} encounters an error.', extra={'error': e, 'url': f'{file_server.base_url}{path}'})
                     logger.exception(e)
                     continue
                 finally:
                     queue.task_done()
 
-        queue.put((depth, current_path))
+            logger.debug(f'Thread {current_thread().name} exiting')
+
+        queue.put('')
 
         threads: list[Thread] = []
         for i in range(10):
-            thread = Thread(target=worker, name=f'Thread-{i}')
+            thread_name: str = f'{current_thread().name}-Crawler-{i}'
+            thread = Thread(target=worker, name=thread_name)
             thread.start()
             threads.append(thread)
 
         queue.join()
         for thread in threads:
             thread.join()
+        pages_queue.put(None)
 
-        return pages
+        logger.debug(f'Thread {current_thread().name} exiting')

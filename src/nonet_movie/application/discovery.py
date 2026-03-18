@@ -1,66 +1,50 @@
+import logging
+from queue import Empty
+from threading import Thread
+
+from nonet_movie.application.discovery_queue import DiscoveryQueue
 from underpy import ServiceClass
 
-from .movie_source import MovieSourcesFactory, MovieSource, MissedMovie
+from .movie_source import MovieSourcesFactory, MovieSource
 from ..domain.movie import Movie
 from ..domain.service.movie_repositoy import MovieRepository
 
 
+logger = logging.getLogger('DiscoverNewMoviesUseCase')
+
+
 class DiscoveryReport:
-    def __init__(self, saved_movies: list[Movie], missed_movies: list[MissedMovie]):
-        self.saved_movies = saved_movies
-        self.missed_movies = missed_movies
-
-    @property
-    def total_movies_count(self) -> int:
-        return len(self.saved_movies) + len(self.missed_movies)
-
-    @property
-    def number_of_saved_movies(self) -> int:
-        return len(self.saved_movies)
-
-    @property
-    def number_of_missed_movies(self) -> int:
-        return len(self.missed_movies)
-
-    @property
-    def has_missed_movies(self) -> bool:
-        return 0 < len(self.missed_movies)
-
+    pass
 
 class DiscoverNewMoviesUseCase(ServiceClass):
-    def __init__(self, movie_repository: MovieRepository, movie_sources_factory: MovieSourcesFactory):
+    def __init__(self, movie_repository: MovieRepository, movie_sources_factory: MovieSourcesFactory, queue: DiscoveryQueue):
         self.__movie_repository = movie_repository
         self.__movie_sources_factory = movie_sources_factory
+        self.__queue = queue
 
     def execute(self) -> DiscoveryReport:
-        movies: list[Movie] = []
-        missed_movies: list[MissedMovie] = []
-
         movie_sources: list[MovieSource] = self.__movie_sources_factory.get_sources()
-        for source in movie_sources:
-            source_movies, source_missed_movies = source.find_movies()
-            movies.extend(source_movies)
-            missed_movies.extend(source_missed_movies)
+        for i, source in enumerate(movie_sources):
+            Thread(target=source.find_movies, args=(self.__queue,), name=f'MovieSource-{i}', daemon=True).start()
+            self.__queue.signal_producers_bind()
 
-        self.__save_movies(movies)
-
-        return DiscoveryReport(movies, missed_movies)
-
-    def __save_movies(self, movies: list[Movie]) -> None:
-        chunk_size: int = 500
+        chunk_size: int = 100
         current_chunk: int = 0
-
         with self.__movie_repository as repository:
-            for movie in movies:
-                existing_movie: Movie = repository.find(movie.id)
-                if not existing_movie is None:
-                    for link in movie.links:
-                        existing_movie.add_link(link)
-                    movie = existing_movie
-                repository.save(movie)
+            while True:
+                try:
+                    movie: Movie = self.__queue.get()
+                except Empty:
+                    break
+                try:
+                    repository.save(movie)
+                    logger.info(f'Saved movie: {movie.id}')
+                    current_chunk += 1
+                    if chunk_size <= current_chunk:
+                        repository.flush()
+                        current_chunk = 0
+                except Exception as e:
+                    logger.error(f'Failed to save movie: {movie.id}', extra={'error': e})
+                    continue
 
-                current_chunk += 1
-                if chunk_size <= current_chunk:
-                    repository.flush()
-                    current_chunk = 0
-            repository.flush()
+        return DiscoveryReport()

@@ -28,7 +28,11 @@ class Movie(AggregateRoot):
     def links(self) -> list['Link']:
         return self.__links
 
-    def add_link(self, link: Link) -> None:
+    def add_links(self, links: list[Link]) -> None:
+        for link in links:
+            self.__add_link(link)
+
+    def __add_link(self, link: Link) -> None:
         for existing_link in self.__links:
             if link.url == existing_link.url:
                 return

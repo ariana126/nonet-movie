@@ -17,11 +17,11 @@ class JsonDBSeriesRepository(SeriesRepository):
     def flush(self) -> None:
         self.db.flush()
 
+    def commit(self) -> None:
+        self.db.commit()
+
     def open_transaction(self) -> None:
         self.db.open_transaction()
-
-    def close_transaction(self) -> None:
-        self.db.close_transaction()
 
     def search_in_title(self, title: str) -> list[Series]:
         records = self.db.load(self.__COLLECTION_NAME)
@@ -40,23 +40,42 @@ class JsonDBSeriesRepository(SeriesRepository):
 
     def save(self, series: Series) -> None:
         self.db.open_transaction()
-        records = self.db.load(self.__COLLECTION_NAME)
-        records[series.id.as_string] = self.__serialize(series)
+
         self.__save_seasons(series.seasons)
+        records = self.db.load(self.__COLLECTION_NAME)
+        if not series.id.as_string in records:
+            records[series.id.as_string] = self.__serialize(series)
+        else:
+            season_ids = records[series.id.as_string]["seasons_ids"]
+            for season in series.seasons:
+                if not season.id.as_string in season_ids:
+                    season_ids.append(season.id.as_string)
         self.db.persist(records, self.__COLLECTION_NAME)
-        self.db.close_transaction()
+        
+        self.db.commit()
 
     def __save_seasons(self, seasons: list[Season]) -> None:
         records = self.db.load(self.__SEASONS_COLLECTION_NAME)
         for season in seasons:
-            records[season.id.as_string] = self.__serialize_season(season)
             self.__save_episodes(season.episodes)
+            if not season.id.as_string in records:
+                records[season.id.as_string] = self.__serialize_season(season)
+                continue
+            episode_ids = records[season.id.as_string]["episodes_ids"]
+            for episode in season.episodes:
+                if not episode.id.as_string in episode_ids:
+                    episode_ids.append(episode.id.as_string)
         self.db.persist(records, self.__SEASONS_COLLECTION_NAME)
 
     def __save_episodes(self, episodes: list[Episode]) -> None:
         records = self.db.load(self.__EPISODES_COLLECTION_NAME)
         for episode in episodes:
-            records[episode.id.as_string] = self.__serialize_episode(episode)
+            if not episode.id.as_string in records:
+                records[episode.id.as_string] = self.__serialize_episode(episode)
+                continue
+            persisted_episode: Episode = self.__deserialize_episode(records[episode.id.as_string])
+            persisted_episode.add_links(episode.links)
+            records[episode.id.as_string] = self.__serialize_episode(persisted_episode)
         self.db.persist(records, self.__EPISODES_COLLECTION_NAME)
 
     def __fetch_relations(self, series_record: JSON) -> JSON:
@@ -91,6 +110,14 @@ class JsonDBSeriesRepository(SeriesRepository):
         return Series(record["title"], seasons)
 
     @staticmethod
+    def __deserialize_episode(record: dict) -> Episode:
+        links: list[Link] = [
+            Link(link_data["url"], link_data["version"], FileSize.from_string(link_data["size"]))
+            for link_data in record["links"]
+        ]
+        return Episode(Identity.from_string(record["season_id"]), EpisodeNumber.from_string(record["number"]), links)
+
+    @staticmethod
     def __serialize(series: Series) -> JSON:
         return {
             "title": series.title,
@@ -100,6 +127,7 @@ class JsonDBSeriesRepository(SeriesRepository):
     @staticmethod
     def __serialize_season(season: Season) -> JSON:
         return {
+            "series_id": season.series_id.as_string,
             "number": season.number.as_string,
             "episodes_ids": [episode.id.as_string for episode in season.episodes],
         }
@@ -107,6 +135,7 @@ class JsonDBSeriesRepository(SeriesRepository):
     @staticmethod
     def __serialize_episode(episode: Episode) -> JSON:
         return {
+            "season_id": episode.season_id.as_string,
             "number": episode.number.as_string,
             "links": [
                 {

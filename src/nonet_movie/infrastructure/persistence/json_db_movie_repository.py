@@ -14,11 +14,11 @@ class JsonDBMovieRepository(MovieRepository):
     def flush(self) -> None:
         self.db.flush()
 
+    def commit(self) -> None:
+        self.db.commit()
+
     def open_transaction(self) -> None:
         self.db.open_transaction()
-
-    def close_transaction(self) -> None:
-        self.db.close_transaction()
 
     def search_in_title(self, title: str) -> list[Movie]:
         records = self.db.load(self.__COLLECTION_NAME)
@@ -36,7 +36,12 @@ class JsonDBMovieRepository(MovieRepository):
 
     def save(self, movie: Movie) -> None:
         records = self.db.load(self.__COLLECTION_NAME)
-        records[movie.id.as_string] = self.__serialize(movie)
+        if not movie.id.as_string in records:
+            records[movie.id.as_string] = self.__serialize(movie)
+        else:
+            persisted_movie: Movie = self.__deserialize(records[movie.id.as_string])
+            persisted_movie.add_links(movie.links)
+            records[movie.id.as_string] = self.__serialize(persisted_movie)
         self.db.persist(records, self.__COLLECTION_NAME)
 
     @staticmethod
