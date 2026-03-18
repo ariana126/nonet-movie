@@ -14,12 +14,7 @@ logger = logging.getLogger('DiscoverNewMoviesUseCase')
 
 
 class DiscoveryReport:
-    def __init__(self, saved_movies: list[Movie]):
-        self.saved_movies = saved_movies
-
-    @property
-    def count_of_saved_movies(self) -> int:
-        return len(self.saved_movies)
+    pass
 
 class DiscoverNewMoviesUseCase(ServiceClass):
     def __init__(self, movie_repository: MovieRepository, movie_sources_factory: MovieSourcesFactory, queue: DiscoveryQueue):
@@ -28,8 +23,6 @@ class DiscoverNewMoviesUseCase(ServiceClass):
         self.__queue = queue
 
     def execute(self) -> DiscoveryReport:
-        movies: list[Movie] = []
-
         movie_sources: list[MovieSource] = self.__movie_sources_factory.get_sources()
         for i, source in enumerate(movie_sources):
             Thread(target=source.find_movies, args=(self.__queue,), name=f'MovieSource-{i}', daemon=True).start()
@@ -46,7 +39,6 @@ class DiscoverNewMoviesUseCase(ServiceClass):
                 try:
                     repository.save(movie)
                     logger.info(f'Saved movie: {movie.id}')
-                    movies.append(movie)
                     current_chunk += 1
                     if chunk_size <= current_chunk:
                         repository.flush()
@@ -55,4 +47,4 @@ class DiscoverNewMoviesUseCase(ServiceClass):
                     logger.error(f'Failed to save movie: {movie.id}', extra={'error': e})
                     continue
 
-        return DiscoveryReport(movies)
+        return DiscoveryReport()

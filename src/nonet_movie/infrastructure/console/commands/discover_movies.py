@@ -33,8 +33,3 @@ class DiscoverMoviesCommand(ConsoleCommand):
         table.add_column("elapsed")
         table.add_row(started_at.strftime('%Y-%m-%d %H:%M:%S'), finished_at.strftime('%Y-%m-%d %H:%M:%S'), str(finished_at - started_at))
         console.print(table, justify="center")
-
-        table = Table(title='Summary')
-        table.add_column("Saved Movies")
-        table.add_row(str(report.count_of_saved_movies))
-        console.print(table, justify="center")

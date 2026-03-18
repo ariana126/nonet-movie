@@ -12,27 +12,7 @@ logger = logging.getLogger('DiscoverNewSeriesUseCase')
 
 
 class SeriesDiscoveryReport:
-    def __init__(self, saved_series: list[Series]):
-        self.saved_series = saved_series
-
-    @property
-    def number_of_saved_series(self) -> int:
-        return len(self.saved_series)
-
-    @property
-    def number_of_saved_seasons(self) -> int:
-        count: int = 0
-        for series in self.saved_series:
-            count += len(series.seasons)
-        return count
-
-    @property
-    def number_of_saved_episodes(self) -> int:
-        count: int = 0
-        for series in self.saved_series:
-            for season in series.seasons:
-                count += len(season.episodes)
-        return count
+    pass
 
 
 class DiscoverNewSeriesUseCase:
@@ -63,4 +43,4 @@ class DiscoverNewSeriesUseCase:
                     repository.flush()
                     current_chunk = 0
 
-        return SeriesDiscoveryReport([])
+        return SeriesDiscoveryReport()

@@ -34,10 +34,3 @@ class DiscoverSeriesCommand(ConsoleCommand):
         table.add_column("elapsed")
         table.add_row(started_at.strftime('%Y-%m-%d %H:%M:%S'), finished_at.strftime('%Y-%m-%d %H:%M:%S'), str(finished_at - started_at))
         console.print(table, justify="center")
-
-        table = Table(title='Summary')
-        table.add_column("Saved Series")
-        table.add_column("Saved Seasons")
-        table.add_column("Saved Episodes")
-        table.add_row(str(report.number_of_saved_series), str(report.number_of_saved_seasons), str(report.number_of_saved_episodes))
-        console.print(table, justify="center")
