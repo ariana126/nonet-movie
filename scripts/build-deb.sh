@@ -13,6 +13,7 @@ DIST_DIR="$PROJECT_ROOT/dist"
 WORK_DIR="$DIST_DIR/deb-work"
 BUILD_DIR="$PROJECT_ROOT/build/pyinstaller-deb"
 ENTRY_POINT="$PROJECT_ROOT/scripts/windows_main.py"
+ICON_SOURCE="$PROJECT_ROOT/assets/nonet-movie.svg"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 if ! command -v dpkg-deb >/dev/null 2>&1; then
@@ -46,10 +47,17 @@ PY
 PKG_ROOT="$WORK_DIR/${PKG_NAME}_${VERSION}"
 INSTALL_ROOT="$PKG_ROOT/opt/$APP_NAME"
 BUNDLED_BIN="$INSTALL_ROOT/$APP_NAME"
+ICON_INSTALL_DIR="$PKG_ROOT/usr/share/icons/hicolor/scalable/apps"
+DESKTOP_INSTALL_DIR="$PKG_ROOT/usr/share/applications"
+
+if [ ! -f "$ICON_SOURCE" ]; then
+  echo "Missing app icon at $ICON_SOURCE"
+  exit 1
+fi
 
 echo "Building ${PKG_NAME}_${VERSION}.deb ..."
 rm -rf "$PKG_ROOT"
-mkdir -p "$PKG_ROOT/DEBIAN" "$PKG_ROOT/usr/bin" "$PKG_ROOT/etc" "$INSTALL_ROOT"
+mkdir -p "$PKG_ROOT/DEBIAN" "$PKG_ROOT/usr/bin" "$PKG_ROOT/etc" "$INSTALL_ROOT" "$ICON_INSTALL_DIR" "$DESKTOP_INSTALL_DIR"
 
 if ! "$PYTHON_BIN" -m PyInstaller --version >/dev/null 2>&1; then
   "$PYTHON_BIN" -m pip install --upgrade pip
@@ -105,6 +113,20 @@ export LOG_PATH
 exec /opt/nonet-movie/nonet-movie "$@"
 EOF
 chmod 0755 "$PKG_ROOT/usr/bin/$APP_NAME"
+
+install -m 0644 "$ICON_SOURCE" "$ICON_INSTALL_DIR/$APP_NAME.svg"
+
+cat > "$DESKTOP_INSTALL_DIR/$APP_NAME.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Nonet Movie
+Comment=Discover and search movie and series links
+Exec=/usr/bin/$APP_NAME
+Icon=$APP_NAME
+Terminal=true
+Categories=Utility;
+EOF
+chmod 0644 "$DESKTOP_INSTALL_DIR/$APP_NAME.desktop"
 
 cat > "$PKG_ROOT/etc/nonet-movie.env" <<'EOF'
 # System-wide defaults for nonet-movie.
