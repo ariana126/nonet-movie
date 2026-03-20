@@ -2,13 +2,16 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
+from nonet_movie.infrastructure.persistence.json_db import JsonDB
 
+
+# TODO: Decouple app use case from db implementation, which is in infrastructure.
 class ExportDatabaseUseCase:
-    def __init__(self, db_path: str):
-        self.__db_path = db_path
+    def __init__(self, db: JsonDB):
+        self.__db = db
 
     def execute(self) -> str:
-        db_path = Path(self.__db_path).expanduser().resolve()
+        db_path = Path(self.__db.get_db_path()).expanduser().resolve()
         downloads_dir = Path.home() / "Downloads"
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
