@@ -121,9 +121,10 @@ cat > "$DESKTOP_INSTALL_DIR/$APP_NAME.desktop" <<EOF
 Type=Application
 Name=Nonet Movie
 Comment=Discover and search movie and series links
-Exec=/usr/bin/$APP_NAME
+Exec=/usr/bin/${APP_NAME}-desktop
 Icon=$APP_NAME
-Terminal=true
+Terminal=false
+StartupWMClass=nonet-movie
 Categories=Utility;
 EOF
 chmod 0644 "$DESKTOP_INSTALL_DIR/$APP_NAME.desktop"
@@ -153,6 +154,29 @@ EOF
 mkdir -p "$DIST_DIR"
 OUTPUT_DEB="$DIST_DIR/${PKG_NAME}_${VERSION}.deb"
 rm -f "$OUTPUT_DEB"
+
+cat > "$PKG_ROOT/usr/bin/${APP_NAME}-desktop" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_CMD="/usr/bin/nonet-movie"
+
+if command -v gnome-terminal >/dev/null 2>&1; then
+  exec gnome-terminal --wait --class=nonet-movie --title="Nonet Movie" -- "$APP_CMD"
+fi
+
+if command -v x-terminal-emulator >/dev/null 2>&1; then
+  exec x-terminal-emulator -class nonet-movie -T "Nonet Movie" -e "$APP_CMD"
+fi
+
+if command -v xterm >/dev/null 2>&1; then
+  exec xterm -class nonet-movie -T "Nonet Movie" -e "$APP_CMD"
+fi
+
+exec "$APP_CMD"
+EOF
+chmod 0755 "$PKG_ROOT/usr/bin/${APP_NAME}-desktop"
+
 dpkg-deb --build "$PKG_ROOT" "$OUTPUT_DEB"
 
 echo "Created: $OUTPUT_DEB"
