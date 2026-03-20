@@ -11,7 +11,7 @@ from rich.panel import Panel
 from rich.text import Text
 from underpy import Fn
 
-from nonet_movie.domain import Link
+from nonet_movie.domain import Link, Subtitle
 
 
 class TerminalPage:
@@ -92,6 +92,12 @@ class TerminalPresenter:
         self.present_menu([
             TerminalMenuItem(f'{link.version} ({link.size})', Fn(self.__open_url, link.url))
             for link in links
+        ])
+
+    def present_subtitles(self, subtitles: list[Subtitle]) -> None:
+        self.present_menu([
+            TerminalMenuItem(subtitle.name, Fn(self.__open_url, subtitle.url))
+            for subtitle in subtitles
         ])
 
     def present_welcome_message(self):

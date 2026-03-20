@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from pydm import ServiceContainer, EnvParametersBag
 
 from .movie_source.factory import MovieSourcesFactoryImpl, SeriesSourcesFactoryImpl
+from .movie_source.subtitle_provider_factory import SubtitleProviderFactory
 from .persistence.json_db import JsonDB
 from .persistence.json_db_movie_repository import JsonDBMovieRepository
 from .persistence.json_db_series_repository import JsonDBSeriesRepository
@@ -15,6 +16,7 @@ from ..application.export_database import ExportDatabaseUseCase
 from ..application.import_database import ImportDatabaseUseCase
 from ..application.movie_source import MovieSourcesFactory
 from ..application.series_source import SeriesSourcesFactory
+from ..application.subtitle import SubtitleProvider
 from ..domain.service.movie_repositoy import MovieRepository
 from ..domain.service.series_repository import SeriesRepository
 
@@ -36,6 +38,8 @@ def boot() -> None:
 
     service_container.bind(MovieSourcesFactory, MovieSourcesFactoryImpl)
     service_container.bind(SeriesSourcesFactory, SeriesSourcesFactoryImpl)
+
+    service_container.bind_to_factory(SubtitleProvider, SubtitleProviderFactory, 'make')
 
     configure_logger(parameters.get('LOG_PATH'), 'true' == parameters.get('DEBUG'))
 
