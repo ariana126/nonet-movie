@@ -60,8 +60,33 @@ jobs:
           path: dist/*.pkg
           if-no-files-found: error
 
+  build-macos-dmg:
+    name: Build macOS DMG
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Build .dmg
+        run: |
+          chmod +x scripts/build-macos-dmg.sh
+          ./scripts/build-macos-dmg.sh
+
+      - name: Upload .dmg artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: nonet-movie-macos-dmg
+          path: dist/*.dmg
+          if-no-files-found: error
+
   build-windows-exe:
-    name: Build Windows executable
+    name: Build Windows executable and installer
     runs-on: windows-latest
 
     steps:
@@ -73,16 +98,36 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Install ImageMagick
+        shell: pwsh
+        run: |
+          choco install imagemagick -y
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y
+
       - name: Build .exe
         shell: pwsh
         run: |
           ./scripts/build-windows-exe.ps1
+          ./scripts/build-windows-installer.ps1
 
-      - name: Upload .exe artifact
+      - name: Upload portable .exe artifact
         uses: actions/upload-artifact@v7
         with:
-          name: nonet-movie-windows-exe
-          path: dist/*.exe
+          name: nonet-movie-windows-portable-exe
+          path: |
+            dist/nonet-movie.exe
+            dist/nonet-movie-[0-9]*.exe
+          if-no-files-found: error
+
+      - name: Upload installer .exe artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: nonet-movie-windows-installer-exe
+          path: dist/nonet-movie-setup-*.exe
           if-no-files-found: error
 
   verify-deb:
@@ -169,8 +214,59 @@ jobs:
             exit 1
           fi
 
+  verify-macos-dmg:
+    name: Verify macOS DMG
+    runs-on: macos-latest
+    needs: build-macos-dmg
+
+    steps:
+      - name: Download .dmg artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: nonet-movie-macos-dmg
+          path: verify-assets/dmg
+
+      - name: Verify DMG contents
+        run: |
+          shopt -s nullglob
+          dmg_files=(verify-assets/dmg/*.dmg)
+          if [ ${#dmg_files[@]} -eq 0 ]; then
+            echo "No .dmg found for verification."
+            exit 1
+          fi
+
+          mount_point="$(mktemp -d)"
+          hdiutil attach "${dmg_files[0]}" -mountpoint "$mount_point" -nobrowse -quiet
+          trap 'hdiutil detach "$mount_point" -quiet || true; rmdir "$mount_point" || true' EXIT
+
+          if [ ! -d "$mount_point/Nonet Movie.app" ]; then
+            echo "DMG does not contain Nonet Movie.app"
+            exit 1
+          fi
+
+          if [ ! -L "$mount_point/Applications" ]; then
+            echo "DMG does not contain Applications symlink"
+            exit 1
+          fi
+
+          set +e
+          health_output="$("$mount_point/Nonet Movie.app/Contents/MacOS/nonet-movie" --health 2>&1)"
+          exit_code=$?
+          set -e
+          echo "$health_output"
+
+          if [ "$exit_code" -ne 0 ]; then
+            echo "Bundled app --health exited with code $exit_code"
+            exit 1
+          fi
+
+          if [[ "$health_output" != *"OK"* ]]; then
+            echo "Bundled app --health did not print OK"
+            exit 1
+          fi
+
   verify-windows-exe:
-    name: Verify Windows executable
+    name: Verify Windows portable executable
     runs-on: windows-latest
     needs: build-windows-exe
 
@@ -178,13 +274,13 @@ jobs:
       - name: Download .exe artifact
         uses: actions/download-artifact@v7
         with:
-          name: nonet-movie-windows-exe
-          path: verify-assets/exe
+          name: nonet-movie-windows-portable-exe
+          path: verify-assets/portable-exe
 
       - name: Run executable health check
         shell: pwsh
         run: |
-          $exe = Get-ChildItem -Path "verify-assets/exe" -Filter *.exe | Select-Object -First 1
+          $exe = Get-ChildItem -Path "verify-assets/portable-exe" -Filter *.exe | Select-Object -First 1
           if (-not $exe) {
             throw "No .exe found for verification."
           }
@@ -195,11 +291,84 @@ jobs:
           Write-Host $healthText
 
           if ($exitCode -ne 0) {
-            throw "Installer --health exited with code $exitCode."
+            throw "Portable executable --health exited with code $exitCode."
           }
 
           if ($healthText -notmatch 'OK') {
-            throw "Installer --health did not print OK."
+            throw "Portable executable --health did not print OK."
+          }
+
+  verify-windows-installer:
+    name: Verify Windows installer
+    runs-on: windows-latest
+    needs: build-windows-exe
+
+    steps:
+      - name: Download installer .exe artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: nonet-movie-windows-installer-exe
+          path: verify-assets/installer-exe
+
+      - name: Install silently and run health check
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path "verify-assets/installer-exe" -Filter *.exe | Select-Object -First 1
+          if (-not $installer) {
+            throw "No installer .exe found for verification."
+          }
+
+          $installDir = Join-Path $env:RUNNER_TEMP "nonet-movie-installed"
+          if (Test-Path $installDir) {
+            Remove-Item -Path $installDir -Recurse -Force
+          }
+
+          $installerArgs = @(
+            "/VERYSILENT",
+            "/SUPPRESSMSGBOXES",
+            "/NORESTART",
+            "/SP-",
+            "/CURRENTUSER",
+            "/DIR=$installDir"
+          )
+          $installProcess = Start-Process -FilePath $installer.FullName -ArgumentList $installerArgs -Wait -PassThru
+          $installExitCode = $installProcess.ExitCode
+          if ($installExitCode -ne 0) {
+            throw "Installer execution failed with exit code $installExitCode."
+          }
+
+          $candidateDirs = @(
+            $installDir,
+            (Join-Path $env:LOCALAPPDATA "Programs\Nonet Movie"),
+            (Join-Path ${env:ProgramFiles} "Nonet Movie")
+          ) | Select-Object -Unique
+
+          $installedExe = $null
+          foreach ($dir in $candidateDirs) {
+            $candidate = Join-Path $dir "nonet-movie.exe"
+            if (Test-Path $candidate) {
+              $installedExe = $candidate
+              break
+            }
+          }
+
+          if (-not $installedExe) {
+            $searched = ($candidateDirs -join ", ")
+            throw "Installed executable not found. Searched: $searched"
+          }
+
+          Write-Host "Using installed executable: $installedExe"
+          $healthOutput = & $installedExe --health 2>&1
+          $exitCode = $LASTEXITCODE
+          $healthText = ($healthOutput | Out-String).Trim()
+          Write-Host $healthText
+
+          if ($exitCode -ne 0) {
+            throw "Installer-installed executable --health exited with code $exitCode."
+          }
+
+          if ($healthText -notmatch 'OK') {
+            throw "Installer-installed executable --health did not print OK."
           }
 
   create-release:
@@ -208,7 +377,9 @@ jobs:
     needs:
       - verify-deb
       - verify-macos-pkg
+      - verify-macos-dmg
       - verify-windows-exe
+      - verify-windows-installer
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
@@ -224,11 +395,23 @@ jobs:
           name: nonet-movie-macos-pkg
           path: release-assets/pkg
 
-      - name: Download .exe artifact
+      - name: Download .dmg artifact
         uses: actions/download-artifact@v7
         with:
-          name: nonet-movie-windows-exe
+          name: nonet-movie-macos-dmg
+          path: release-assets/dmg
+
+      - name: Download portable .exe artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: nonet-movie-windows-portable-exe
           path: release-assets/exe
+
+      - name: Download installer .exe artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: nonet-movie-windows-installer-exe
+          path: release-assets/installer-exe
 
       - name: Publish GitHub release
         env:
@@ -241,7 +424,9 @@ jobs:
           files=(
             release-assets/deb/*.deb
             release-assets/pkg/*.pkg
+            release-assets/dmg/*.dmg
             release-assets/exe/*.exe
+            release-assets/installer-exe/*.exe
           )
 
           if [ ${#files[@]} -eq 0 ]; then

@@ -5,6 +5,8 @@ $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Pa
 $DistDir = Join-Path $ProjectRoot "dist"
 $BuildDir = Join-Path $ProjectRoot "build\pyinstaller"
 $EntryPoint = Join-Path $ProjectRoot "scripts\windows_main.py"
+$SharedIconSvg = Join-Path $ProjectRoot "assets\nonet-movie.svg"
+$WindowsIconIco = Join-Path $BuildDir "nonet-movie.ico"
 $Version = $env:VERSION
 
 if ([string]::IsNullOrWhiteSpace($Version)) {
@@ -28,11 +30,26 @@ python -m pip install $ProjectRoot
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 
+if (-not (Test-Path $SharedIconSvg)) {
+    throw "Missing shared icon file: $SharedIconSvg"
+}
+
+$MagickCmd = Get-Command magick -ErrorAction SilentlyContinue
+if (-not $MagickCmd) {
+    throw "ImageMagick ('magick') is required to convert $SharedIconSvg to .ico for Windows packaging."
+}
+
+& $MagickCmd.Source $SharedIconSvg -background none -define icon:auto-resize=256,128,64,48,32,16 $WindowsIconIco
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path $WindowsIconIco)) {
+    throw "Failed to generate Windows icon file: $WindowsIconIco"
+}
+
 python -m PyInstaller `
     --noconfirm `
     --clean `
     --onefile `
     --name "nonet-movie" `
+    --icon $WindowsIconIco `
     --distpath $DistDir `
     --workpath $BuildDir `
     $EntryPoint
