@@ -24,10 +24,15 @@ class SearchSeriesCommand(ConsoleCommand):
             return
 
         self.__presenter.present_menu_page(f'Founded for: {title}', [
-            TerminalMenuItem(series.title, Fn(self.__present_seasons, series.seasons))
+            TerminalMenuItem(series.title, Fn(self.present_series_page, series))
             for series in series_list
         ])
 
+    def present_series_page(self, series: Series) -> None:
+        self.__presenter.present_menu([
+            TerminalMenuItem('Download', Fn(self.__present_seasons, series.seasons)),
+            TerminalMenuItem('Subtitles', Fn(self.__presenter.present_subtitles, series.subtitles)),
+        ])
 
     def __present_seasons(self, seasons: list[Season]) -> None:
         if 0 == len(seasons):

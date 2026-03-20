@@ -24,6 +24,12 @@ class SearchMoviesCommand(ConsoleCommand):
             return
 
         self.__presenter.present_menu_page(f'Founded for: {title}', [
-            TerminalMenuItem(f'{movie.title} ({movie.year})', Fn(self.__presenter.present_links, movie.links))
+            TerminalMenuItem(f'{movie.title} ({movie.year})', Fn(self.__present_movie_page, movie))
             for movie in movies
+        ])
+
+    def __present_movie_page(self, movie: Movie) -> None:
+        self.__presenter.present_menu([
+            TerminalMenuItem('Download', Fn(self.__presenter.present_links, movie.links)),
+            TerminalMenuItem('Subtitles', Fn(self.__presenter.present_subtitles, movie.subtitles)),
         ])

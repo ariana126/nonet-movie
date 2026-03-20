@@ -1,7 +1,8 @@
 from ddd.domain import AggregateRoot, Entity, ValueObject
 from ddd.domain.value import Identity
 
-from nonet_movie.domain import Link
+from nonet_movie.domain import Link, Subtitle
+
 
 class EpisodeNumber(ValueObject):
     def __init__(self, number: int) -> None:
@@ -117,10 +118,11 @@ class Season(Entity):
         return f'Season({self.__series_id}, {self.__number}, {self.__episodes})'
 
 class Series(AggregateRoot):
-    def __init__(self, title: str, seasons: list[Season]):
+    def __init__(self, title: str, seasons: list[Season], subtitles: list[Subtitle]|None = None) -> None:
         super().__init__(Identity.from_string(title))
         self.__title = title
         self.__seasons = seasons
+        self.__subtitles = subtitles if not subtitles is None else []
 
     @property
     def title(self) -> str:
@@ -130,6 +132,10 @@ class Series(AggregateRoot):
     def seasons(self) -> list[Season]:
         return self.__seasons
 
+    @property
+    def subtitles(self) -> list[Subtitle]:
+        return self.__subtitles
+
     def add_episode_link(self, season_number: SeasonNumber, episode_number: EpisodeNumber, link: Link) -> None:
         for season in self.__seasons:
             if season_number.equals(season.number):
@@ -138,6 +144,16 @@ class Series(AggregateRoot):
         season = Season(self._id, season_number, [])
         season.add_episode_link(episode_number, link)
         self.__seasons.append(season)
+
+    def add_subtitles(self, subtitles: list[Subtitle]) -> None:
+        for subtitle in subtitles:
+            self.__add_subtitle(subtitle)
+
+    def __add_subtitle(self, subtitle: Subtitle) -> None:
+        for existing_subtitle in self.__subtitles:
+            if subtitle.url == existing_subtitle.url:
+                return
+        self.__subtitles.append(subtitle)
 
     def __repr__(self):
         return f'Series(title: {self.title}, seasons: {self.__seasons})'
