@@ -12,8 +12,6 @@ from .movie_source.subtitle_provider_factory import SubtitleProviderFactory
 from .persistence.json_db import JsonDB
 from .persistence.json_db_movie_repository import JsonDBMovieRepository
 from .persistence.json_db_series_repository import JsonDBSeriesRepository
-from ..application.export_database import ExportDatabaseUseCase
-from ..application.import_database import ImportDatabaseUseCase
 from ..application.movie_source import MovieSourcesFactory
 from ..application.series_source import SeriesSourcesFactory
 from ..application.subtitle import SubtitleProvider
