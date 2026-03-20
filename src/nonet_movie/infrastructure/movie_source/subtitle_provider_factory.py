@@ -1,5 +1,5 @@
 from nonet_movie.application.subtitle import SubtitleProvider, SubtitleSource
-from nonet_movie.infrastructure.movie_source.subzone_source import SubzoneSource
+from .subzone_source import SubzoneSource
 
 
 class SubtitleProviderFactory:
