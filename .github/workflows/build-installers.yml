@@ -60,6 +60,31 @@ jobs:
           path: dist/*.pkg
           if-no-files-found: error
 
+  build-macos-dmg:
+    name: Build macOS DMG
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Build .dmg
+        run: |
+          chmod +x scripts/build-macos-dmg.sh
+          ./scripts/build-macos-dmg.sh
+
+      - name: Upload .dmg artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: nonet-movie-macos-dmg
+          path: dist/*.dmg
+          if-no-files-found: error
+
   build-windows-exe:
     name: Build Windows executable
     runs-on: windows-latest
@@ -174,6 +199,57 @@ jobs:
             exit 1
           fi
 
+  verify-macos-dmg:
+    name: Verify macOS DMG
+    runs-on: macos-latest
+    needs: build-macos-dmg
+
+    steps:
+      - name: Download .dmg artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: nonet-movie-macos-dmg
+          path: verify-assets/dmg
+
+      - name: Verify DMG contents
+        run: |
+          shopt -s nullglob
+          dmg_files=(verify-assets/dmg/*.dmg)
+          if [ ${#dmg_files[@]} -eq 0 ]; then
+            echo "No .dmg found for verification."
+            exit 1
+          fi
+
+          mount_point="$(mktemp -d)"
+          hdiutil attach "${dmg_files[0]}" -mountpoint "$mount_point" -nobrowse -quiet
+          trap 'hdiutil detach "$mount_point" -quiet || true; rmdir "$mount_point" || true' EXIT
+
+          if [ ! -d "$mount_point/Nonet Movie.app" ]; then
+            echo "DMG does not contain Nonet Movie.app"
+            exit 1
+          fi
+
+          if [ ! -L "$mount_point/Applications" ]; then
+            echo "DMG does not contain Applications symlink"
+            exit 1
+          fi
+
+          set +e
+          health_output="$("$mount_point/Nonet Movie.app/Contents/MacOS/nonet-movie" --health 2>&1)"
+          exit_code=$?
+          set -e
+          echo "$health_output"
+
+          if [ "$exit_code" -ne 0 ]; then
+            echo "Bundled app --health exited with code $exit_code"
+            exit 1
+          fi
+
+          if [[ "$health_output" != *"OK"* ]]; then
+            echo "Bundled app --health did not print OK"
+            exit 1
+          fi
+
   verify-windows-exe:
     name: Verify Windows executable
     runs-on: windows-latest
@@ -213,6 +289,7 @@ jobs:
     needs:
       - verify-deb
       - verify-macos-pkg
+      - verify-macos-dmg
       - verify-windows-exe
     if: startsWith(github.ref, 'refs/tags/v')
 
@@ -228,6 +305,12 @@ jobs:
         with:
           name: nonet-movie-macos-pkg
           path: release-assets/pkg
+
+      - name: Download .dmg artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: nonet-movie-macos-dmg
+          path: release-assets/dmg
 
       - name: Download .exe artifact
         uses: actions/download-artifact@v7
@@ -246,6 +329,7 @@ jobs:
           files=(
             release-assets/deb/*.deb
             release-assets/pkg/*.pkg
+            release-assets/dmg/*.dmg
             release-assets/exe/*.exe
           )
 

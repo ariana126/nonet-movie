@@ -84,9 +84,13 @@ Build scripts are included:
 
 - Debian package: `scripts/build-deb.sh`
 - macOS package: `scripts/build-macos-pkg.sh`
+- macOS drag-install DMG: `scripts/build-macos-dmg.sh`
 - Windows executable: `scripts/build-windows-exe.ps1`
 
 Windows packaging expects ImageMagick (`magick`) to be installed so the shared icon (`assets/nonet-movie.svg`) can be converted to a Windows `.ico` during build.
+macOS packaging uses a split distribution model:
+- `.pkg` installs the `nonet-movie` command to `/usr/local/bin/nonet-movie`
+- `.dmg` provides a standalone `Nonet Movie.app` (drag to Applications) with bundled runtime
 
 A GitHub Actions workflow (`.github/workflows/build-installers.yml`) builds installers on tag pushes (`v*`) and publishes a release.
 
