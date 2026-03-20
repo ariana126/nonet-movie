@@ -45,6 +45,9 @@ class FileSize(ValueObject):
         unit = FileSizeUnit.from_string(value[-1:])
         return FileSize(quantity, unit)
 
+    def __str__(self):
+        return self.as_string
+
 class Link(ValueObject):
     def __init__(self, url: str, version: str, size: FileSize):
         # TODO: Use pydantic package for url validation.
