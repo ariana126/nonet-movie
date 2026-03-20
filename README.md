@@ -86,8 +86,10 @@ Build scripts are included:
 - macOS package: `scripts/build-macos-pkg.sh`
 - macOS drag-install DMG: `scripts/build-macos-dmg.sh`
 - Windows executable: `scripts/build-windows-exe.ps1`
+- Windows installer (Start menu/native install): `scripts/build-windows-installer.ps1`
 
 Windows packaging expects ImageMagick (`magick`) to be installed so the shared icon (`assets/nonet-movie.svg`) can be converted to a Windows `.ico` during build.
+Windows installer packaging expects Inno Setup Compiler (`iscc`) to be installed.
 macOS packaging uses a split distribution model:
 - `.pkg` installs the `nonet-movie` command to `/usr/local/bin/nonet-movie`
 - `.dmg` provides a standalone `Nonet Movie.app` (drag to Applications) with bundled runtime

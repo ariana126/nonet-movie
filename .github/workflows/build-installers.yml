@@ -86,7 +86,7 @@ jobs:
           if-no-files-found: error
 
   build-windows-exe:
-    name: Build Windows executable
+    name: Build Windows executable and installer
     runs-on: windows-latest
 
     steps:
@@ -103,16 +103,31 @@ jobs:
         run: |
           choco install imagemagick -y
 
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y
+
       - name: Build .exe
         shell: pwsh
         run: |
           ./scripts/build-windows-exe.ps1
+          ./scripts/build-windows-installer.ps1
 
-      - name: Upload .exe artifact
+      - name: Upload portable .exe artifact
         uses: actions/upload-artifact@v7
         with:
-          name: nonet-movie-windows-exe
-          path: dist/*.exe
+          name: nonet-movie-windows-portable-exe
+          path: |
+            dist/nonet-movie.exe
+            dist/nonet-movie-[0-9]*.exe
+          if-no-files-found: error
+
+      - name: Upload installer .exe artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: nonet-movie-windows-installer-exe
+          path: dist/nonet-movie-setup-*.exe
           if-no-files-found: error
 
   verify-deb:
@@ -251,7 +266,7 @@ jobs:
           fi
 
   verify-windows-exe:
-    name: Verify Windows executable
+    name: Verify Windows portable executable
     runs-on: windows-latest
     needs: build-windows-exe
 
@@ -259,13 +274,13 @@ jobs:
       - name: Download .exe artifact
         uses: actions/download-artifact@v7
         with:
-          name: nonet-movie-windows-exe
-          path: verify-assets/exe
+          name: nonet-movie-windows-portable-exe
+          path: verify-assets/portable-exe
 
       - name: Run executable health check
         shell: pwsh
         run: |
-          $exe = Get-ChildItem -Path "verify-assets/exe" -Filter *.exe | Select-Object -First 1
+          $exe = Get-ChildItem -Path "verify-assets/portable-exe" -Filter *.exe | Select-Object -First 1
           if (-not $exe) {
             throw "No .exe found for verification."
           }
@@ -276,11 +291,84 @@ jobs:
           Write-Host $healthText
 
           if ($exitCode -ne 0) {
-            throw "Installer --health exited with code $exitCode."
+            throw "Portable executable --health exited with code $exitCode."
           }
 
           if ($healthText -notmatch 'OK') {
-            throw "Installer --health did not print OK."
+            throw "Portable executable --health did not print OK."
+          }
+
+  verify-windows-installer:
+    name: Verify Windows installer
+    runs-on: windows-latest
+    needs: build-windows-exe
+
+    steps:
+      - name: Download installer .exe artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: nonet-movie-windows-installer-exe
+          path: verify-assets/installer-exe
+
+      - name: Install silently and run health check
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path "verify-assets/installer-exe" -Filter *.exe | Select-Object -First 1
+          if (-not $installer) {
+            throw "No installer .exe found for verification."
+          }
+
+          $installDir = Join-Path $env:RUNNER_TEMP "nonet-movie-installed"
+          if (Test-Path $installDir) {
+            Remove-Item -Path $installDir -Recurse -Force
+          }
+
+          $installerArgs = @(
+            "/VERYSILENT",
+            "/SUPPRESSMSGBOXES",
+            "/NORESTART",
+            "/SP-",
+            "/CURRENTUSER",
+            "/DIR=$installDir"
+          )
+          $installProcess = Start-Process -FilePath $installer.FullName -ArgumentList $installerArgs -Wait -PassThru
+          $installExitCode = $installProcess.ExitCode
+          if ($installExitCode -ne 0) {
+            throw "Installer execution failed with exit code $installExitCode."
+          }
+
+          $candidateDirs = @(
+            $installDir,
+            (Join-Path $env:LOCALAPPDATA "Programs\Nonet Movie"),
+            (Join-Path ${env:ProgramFiles} "Nonet Movie")
+          ) | Select-Object -Unique
+
+          $installedExe = $null
+          foreach ($dir in $candidateDirs) {
+            $candidate = Join-Path $dir "nonet-movie.exe"
+            if (Test-Path $candidate) {
+              $installedExe = $candidate
+              break
+            }
+          }
+
+          if (-not $installedExe) {
+            $searched = ($candidateDirs -join ", ")
+            throw "Installed executable not found. Searched: $searched"
+          }
+
+          Write-Host "Using installed executable: $installedExe"
+          $healthOutput = & $installedExe --health 2>&1
+          $exitCode = $LASTEXITCODE
+          $healthText = ($healthOutput | Out-String).Trim()
+          Write-Host $healthText
+
+          if ($exitCode -ne 0) {
+            throw "Installer-installed executable --health exited with code $exitCode."
+          }
+
+          if ($healthText -notmatch 'OK') {
+            throw "Installer-installed executable --health did not print OK."
           }
 
   create-release:
@@ -291,6 +379,7 @@ jobs:
       - verify-macos-pkg
       - verify-macos-dmg
       - verify-windows-exe
+      - verify-windows-installer
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
@@ -312,11 +401,17 @@ jobs:
           name: nonet-movie-macos-dmg
           path: release-assets/dmg
 
-      - name: Download .exe artifact
+      - name: Download portable .exe artifact
         uses: actions/download-artifact@v7
         with:
-          name: nonet-movie-windows-exe
+          name: nonet-movie-windows-portable-exe
           path: release-assets/exe
+
+      - name: Download installer .exe artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: nonet-movie-windows-installer-exe
+          path: release-assets/installer-exe
 
       - name: Publish GitHub release
         env:
@@ -331,6 +426,7 @@ jobs:
             release-assets/pkg/*.pkg
             release-assets/dmg/*.dmg
             release-assets/exe/*.exe
+            release-assets/installer-exe/*.exe
           )
 
           if [ ${#files[@]} -eq 0 ]; then
