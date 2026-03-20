@@ -30,8 +30,6 @@ def boot() -> None:
     service_container.set_parameters(parameters)
 
     service_container.bind_parameters(JsonDB, {'db_path': 'JSON_DB_PATH'})
-    service_container.bind_parameters(ExportDatabaseUseCase, {'db_path': 'JSON_DB_PATH'})
-    service_container.bind_parameters(ImportDatabaseUseCase, {'db_path': 'JSON_DB_PATH'})
 
     service_container.bind(MovieRepository, JsonDBMovieRepository)
     service_container.bind(SeriesRepository, JsonDBSeriesRepository)

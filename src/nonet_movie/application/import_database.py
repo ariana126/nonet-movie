@@ -3,6 +3,7 @@ import shutil
 import zipfile
 from pathlib import Path
 
+from nonet_movie.infrastructure.persistence.json_db import JsonDB
 
 logger = logging.getLogger('ImportDatabaseUseCase')
 
@@ -11,9 +12,10 @@ class ImportDataError(Exception):
     pass
 
 
+# TODO: Decouple app use case from db implementation, which is in infrastructure.
 class ImportDatabaseUseCase:
-    def __init__(self, db_path: str) -> None:
-        self.__db_path = db_path
+    def __init__(self, db: JsonDB) -> None:
+        self.__db = db
 
     def execute(self, file_path: str) -> None:
         """
@@ -33,7 +35,7 @@ class ImportDatabaseUseCase:
         except FileNotFoundError:
             raise ImportDataError(f"No file found at {file_path}")
 
-        db_path = Path(self.__db_path).expanduser().resolve()
+        db_path = Path(self.__db.get_db_path()).expanduser().resolve()
         parent_dir = db_path.parent
         temp_dir = parent_dir / ".temp"
 
@@ -77,3 +79,5 @@ class ImportDatabaseUseCase:
         if db_path.exists():
             shutil.rmtree(db_path)
         temp_dir.rename(db_path)
+
+        self.__db.clear()

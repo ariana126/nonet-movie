@@ -14,6 +14,12 @@ class JsonDB:
         self.__loaded_records: dict[str, JSON] = {}
         self.__transaction_stack_count: int = 0
 
+    def get_db_path(self) -> str:
+        return self.__db_path
+
+    def clear(self) -> None:
+        self.__loaded_records = {}
+
     def flush(self) -> None:
         logger.debug('Flushing')
         for collection_name, records in self.__loaded_records.items():
