@@ -4,7 +4,6 @@ Set-StrictMode -Version Latest
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $DistDir = Join-Path $ProjectRoot "dist"
 $BuildDir = Join-Path $ProjectRoot "build\windows-installer"
-$PortableExe = Join-Path $DistDir "nonet-movie.exe"
 $SharedIconSvg = Join-Path $ProjectRoot "assets\nonet-movie.svg"
 $InstallerIconIco = Join-Path $BuildDir "nonet-movie-installer.ico"
 $Version = $env:VERSION
@@ -17,6 +16,8 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 
     $Version = ($VersionLine -split "=", 2)[1].Trim().Trim('"')
 }
+
+$PortableExe = Join-Path $DistDir ("nonet-movie-{0}.exe" -f $Version)
 
 if (-not (Test-Path $PortableExe)) {
     throw "Missing portable executable: $PortableExe. Run scripts/build-windows-exe.ps1 first."
