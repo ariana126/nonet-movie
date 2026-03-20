@@ -1,13 +1,13 @@
 import os
 import threading
 import time
+import webbrowser
 from datetime import timedelta
 
 from prompt_toolkit.styles import Style
 from questionary import select, Choice, Separator, text, confirm
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 from rich.text import Text
 from underpy import Fn
 
@@ -89,13 +89,10 @@ class TerminalPresenter:
         return confirm(qmark='', message=message, default=default, style=self.style).ask()
 
     def present_links(self, links: list[Link]) -> None:
-        table = Table()
-        table.add_column("version", style="cyan")
-        table.add_column("size", style="magenta")
-        table.add_column("url", overflow="fold", style="green")
-        for link in links:
-            table.add_row(link.version, link.size.as_string, link.url)
-        self.console.print(table)
+        self.present_menu([
+            TerminalMenuItem(f'{link.version} ({link.size})', Fn(self.__open_url, link.url))
+            for link in links
+        ])
 
     def present_welcome_message(self):
         welcome_text = Text(justify='center')
@@ -223,3 +220,7 @@ class TerminalPresenter:
     @staticmethod
     def __is_running_on_windows() -> bool:
         return 'nt' == os.name
+
+    def __open_url(self, url: str) -> None:
+        webbrowser.open(url.replace(' ', '%20'), new=0, autoraise=True)
+        self.__present_previous_page()
